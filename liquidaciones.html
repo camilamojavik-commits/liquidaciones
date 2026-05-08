@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <script>
+  // PASSWORD PROTECTION — SHA-256 hash of "finops2026"
+  const HASH = 'ee793b5488d27e38177234ffc4fe6822217214295c97cb8ab7ff7c943297d527';
+  async function sha256(msg) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  async function checkPassword() {
+    const input = document.getElementById('pwd-input').value;
+    const hash = await sha256(input);
+    if (hash === HASH) {
+      document.getElementById('pwd-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      sessionStorage.setItem('auth','1');
+    } else {
+      document.getElementById('pwd-error').style.display = 'block';
+      document.getElementById('pwd-input').value = '';
+      document.getElementById('pwd-input').focus();
+    }
+  }
+  window.addEventListener('DOMContentLoaded', function() {
+    if (sessionStorage.getItem('auth') === '1') {
+      document.getElementById('pwd-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+    }
+    document.getElementById('pwd-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') checkPassword();
+    });
+  });
+  </script>
+  <style>
+  #pwd-screen {
+    position:fixed;inset:0;background:#171717;display:flex;align-items:center;justify-content:center;z-index:9999;
+    background-image: radial-gradient(ellipse at 60% 40%, rgba(255,99,43,.12) 0%, transparent 60%);
+  }
+  .pwd-box {
+    background:#1e1e1e;border:1px solid #2e2e2e;border-radius:16px;padding:48px 40px;width:380px;text-align:center;
+  }
+  .pwd-logo {background:#FF632B;color:#fff;font-weight:900;font-size:13px;padding:6px 12px;border-radius:7px;display:inline-block;margin-bottom:24px;letter-spacing:.5px;}
+  .pwd-title {color:#fff;font-size:22px;font-weight:800;margin-bottom:6px;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;}
+  .pwd-sub {color:#666;font-size:13px;margin-bottom:28px;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;}
+  .pwd-input {width:100%;padding:12px 16px;border-radius:9px;border:1.5px solid #333;background:#111;color:#fff;font-size:15px;outline:none;margin-bottom:12px;box-sizing:border-box;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;}
+  .pwd-input:focus {border-color:#FF632B;}
+  .pwd-btn {width:100%;padding:12px;border-radius:9px;border:none;background:#FF632B;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;transition:background .15s;}
+  .pwd-btn:hover {background:#C04200;}
+  .pwd-error {color:#ff5555;font-size:12px;margin-top:10px;display:none;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;}
+  #app {display:none;}
+  </style>
+  <title>Liquidación de Facturas — Contenidistas & Workshops</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      color-scheme: light;
+      --primary:#FF632B; --primary-light:#FFF1EB; --primary-dark:#C04200;
+      --green:#22C55E; --green-light:#F0FDF4;
+      --orange:#FE872D; --orange-light:#FFF8F0;
+      --yellow:#FE872D; --yellow-light:#FFF8F0;
+      --red:#E53E3E; --red-light:#FFF5F5;
+      --blue:#3B82F6; --blue-light:#EFF6FF;
+      --purple:#7C3AED; --purple-light:#EDE9FE;
+      --gray-50:#F8F2E8; --gray-100:#F0EBE0; --gray-200:#E0D8CC;
+      --gray-400:#BBBBBB; --gray-600:#585858; --gray-800:#313131;
+      --dark:#171717; --white:#FFFFFF;
+      --bg:#F4EFE8;
+      --radius:10px; --shadow:0 1px 4px rgba(0,0,0,.08); --shadow-md:0 4px 16px rgba(0,0,0,.12);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--gray-800);min-height:100vh}
+
+    /* HEADER */
+    .header{background:var(--dark);border-bottom:1px solid #2a2a2a;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .header-left{display:flex;align-items:center;gap:12px}
+    .logo{background:var(--primary);color:#fff;font-weight:900;font-size:12px;padding:5px 10px;border-radius:6px;letter-spacing:.5px}
+    .header h1{font-size:16px;font-weight:700;color:#fff}
+    .period-pill{font-size:13px;color:#aaa;background:#2a2a2a;padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:6px}
+    .period-pill select{border:none;background:transparent;font-size:13px;color:#fff;font-weight:600;cursor:pointer;outline:none}
+    .header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .btn{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;display:flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif}
+    .btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-dark)}
+    .btn-outline{background:#2a2a2a;color:#fff;border:1.5px solid #3a3a3a}.btn-outline:hover{background:#333}
+    .btn-tally{background:#fff;color:var(--dark);font-weight:700}.btn-tally:hover{background:var(--gray-50)}
+    .btn-sm{padding:5px 10px;font-size:12px}
+    .view-toggle{display:flex;background:#2a2a2a;border-radius:8px;padding:3px;gap:2px}
+    .view-toggle button{padding:5px 13px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:#888;transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif}
+    .view-toggle button.active{background:var(--primary);color:#fff;box-shadow:var(--shadow)}
+
+    /* STATS */
+    .stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:18px 24px 0}
+    .stat-card{background:var(--white);border-radius:var(--radius);padding:14px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:3px}
+    .stat-label{font-size:11px;color:var(--gray-600);font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+    .stat-value{font-size:22px;font-weight:800}
+    .stat-value.green{color:var(--primary)}.stat-value.red{color:var(--red)}.stat-value.orange{color:var(--orange)}
+    .stat-sub{font-size:11px;color:var(--gray-400)}
+
+    /* MAIN */
+    .main{padding:16px 24px;display:flex;flex-direction:column;gap:14px}
+    .panel{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .panel-head{padding:11px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--gray-100)}
+    .panel-head h2{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+    .panel-head.clickable{cursor:pointer;user-select:none}
+    .badge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:10px;font-size:11px;font-weight:700}
+    .badge-red{background:var(--red);color:#fff}.badge-green{background:var(--green);color:#fff}.badge-yellow{background:var(--yellow);color:#fff}
+
+    /* ALERTS */
+    .alerts-body{padding:10px 16px;display:flex;flex-direction:column;gap:7px}
+    .alert-item{display:flex;align-items:flex-start;gap:8px;padding:9px 11px;border-radius:8px;font-size:12px}
+    .alert-item.error{background:var(--red-light);color:#9B1C1C}
+    .alert-item.warning{background:var(--yellow-light);color:#92400E}
+    .no-errors{display:flex;align-items:center;gap:7px;color:var(--green);font-size:13px;font-weight:600;padding:6px}
+
+    /* PRICES */
+    .prices-grid{display:flex}
+    .price-item{flex:1;padding:12px 16px;display:flex;flex-direction:column;gap:3px;border-right:1px solid var(--gray-100)}
+    .price-item:last-child{border-right:none}
+    .price-product{font-size:11px;color:var(--gray-600);font-weight:500}
+    .price-row{display:flex;align-items:center;gap:7px}
+    .price-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+    .price-amount{font-size:18px;font-weight:800}
+    .price-edit{font-size:11px;color:var(--blue);cursor:pointer;background:none;border:none;padding:2px 5px;border-radius:4px;font-weight:600}
+    .price-edit:hover{background:var(--blue-light)}
+
+    /* TABLE */
+    .table-toolbar{padding:11px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--gray-100);flex-wrap:wrap}
+    .table-toolbar h2{font-size:13px;font-weight:700;white-space:nowrap}
+    .search-input{flex:1;min-width:160px;max-width:240px;padding:6px 11px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;outline:none;transition:border-color .15s}
+    .search-input:focus{border-color:var(--primary)}
+    .filter-select{padding:6px 9px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;outline:none;background:var(--white);cursor:pointer}
+    .filter-select:focus{border-color:var(--primary)}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    thead th{padding:9px 13px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-600);background:var(--gray-50);border-bottom:1px solid var(--gray-200);white-space:nowrap}
+    tbody tr{border-bottom:1px solid var(--gray-100);transition:background .1s}
+    tbody tr:hover{background:var(--gray-50)}
+    tbody tr.has-error{background:#FFF8F8}
+    tbody tr.has-error:hover{background:#FFEFEF}
+    tbody tr.from-tally{background:#F0FDF4}
+    td{padding:10px 13px;vertical-align:middle}
+    .td-name{font-weight:600;color:var(--gray-800)}
+    .td-email{color:var(--gray-400);font-size:11px}
+    .product-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+    .chip-workshop{background:#DCFCE7;color:#15803D}
+    .chip-curso{background:#FEF9C3;color:#A16207}
+    .chip-live{background:#EDE9FE;color:#7C3AED}
+    .chip-diplomatura{background:#E0F2FE;color:#0369A1}
+    .chip-asistente{background:#FFECF1;color:#BE185D}
+    .td-num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+    .td-total{text-align:right;font-variant-numeric:tabular-nums;font-weight:800}
+    .err-flag{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;white-space:nowrap}
+    .err-flag.err{background:var(--red-light);color:var(--red)}
+    .err-flag.warn{background:var(--yellow-light);color:#B45309}
+    .err-flag.ok{background:var(--green-light);color:var(--green)}
+    .status-cell{display:flex;flex-wrap:wrap;gap:3px;min-width:100px}
+    .actions-cell{display:flex;gap:5px;align-items:center}
+    .icon-btn{width:30px;height:30px;border-radius:7px;border:1.5px solid var(--gray-200);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .1s;position:relative}
+    .icon-btn:hover{background:var(--gray-100)}
+    .icon-btn.delete:hover{background:var(--red-light);border-color:#FCA5A5}
+    .icon-btn.mail-pending{border-color:var(--blue);background:var(--blue-light)}
+    .icon-btn.mail-sending{border-color:var(--yellow);background:var(--yellow-light);animation:pulse 1s infinite}
+    .icon-btn.mail-sent{border-color:var(--green);background:var(--green-light)}
+    .icon-btn.mail-error{border-color:var(--red);background:var(--red-light)}
+    .icon-btn.drive-saved{border-color:var(--green);background:var(--green-light)}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+    .table-footer{padding:11px 16px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--gray-200);background:var(--gray-50)}
+    .tally-tag{font-size:10px;background:#000;color:#fff;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px}
+
+    /* ADD FORM */
+    .form-body{padding:16px;display:none}
+    .form-body.open{display:block}
+    .form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .form-field{display:flex;flex-direction:column;gap:4px}
+    .form-field label{font-size:11px;font-weight:600;color:var(--gray-600)}
+    .form-field input,.form-field select{padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;outline:none;background:var(--white);transition:border-color .15s}
+    .form-field input:focus,.form-field select:focus{border-color:var(--primary)}
+    .form-preview{margin-top:10px;padding:10px;background:var(--gray-50);border-radius:8px;font-size:12px;color:var(--gray-600);display:none}
+    .form-preview.visible{display:block}
+    .form-actions{margin-top:12px;display:flex;gap:8px}
+
+    /* FINANCE VIEW */
+    #finance-view{display:none}
+    .finance-header{background:var(--dark);color:#fff;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--primary)}
+    .finance-header h1{font-size:17px;font-weight:800}
+    .fin-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--gray-200);margin:18px 24px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+    .fin-stat{background:var(--white);padding:18px 22px}
+    .fin-stat .lbl{font-size:11px;color:var(--gray-600);margin-bottom:5px}
+    .fin-stat .val{font-size:26px;font-weight:900}
+    .fin-table-wrap{padding:0 24px 24px}
+    .fin-table{width:100%;border-radius:var(--radius);overflow-x:auto;box-shadow:var(--shadow)}
+    .fin-table table{width:100%;border-collapse:collapse;font-size:13px}
+    .fin-table thead th{background:var(--dark);color:#fff;padding:11px 15px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+    .fin-table tbody tr:nth-child(even){background:var(--gray-50)}
+    .fin-table tbody tr{border-bottom:1px solid var(--gray-100)}
+    .fin-table td{padding:10px 15px}
+    .fin-table tfoot td{padding:11px 15px;font-weight:800;background:var(--gray-100);border-top:2px solid var(--gray-200)}
+    .fin-note{margin:0 24px 16px;padding:11px 14px;background:var(--yellow-light);border-radius:8px;font-size:12px;color:#92400E}
+
+    /* TALLY MODAL */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--white);border-radius:14px;padding:22px;width:680px;max-width:96vw;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-md)}
+    .modal h3{font-size:15px;font-weight:800;margin-bottom:4px}
+    .modal-sub{font-size:12px;color:var(--gray-600);margin-bottom:16px}
+    .tally-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:9px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+    .tally-row:hover{border-color:var(--primary);background:var(--primary-light)}
+    .tally-row.selected{border-color:var(--primary);background:var(--primary-light)}
+    .tally-check{width:18px;height:18px;border-radius:4px;border:2px solid var(--gray-400);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+    .tally-row.selected .tally-check{background:var(--primary);border-color:var(--primary);color:#fff}
+    .tally-info{flex:1}
+    .tally-name{font-size:13px;font-weight:700}
+    .tally-detail{font-size:11px;color:var(--gray-600);margin-top:2px}
+    .tally-amount{font-size:14px;font-weight:800;color:var(--primary)}
+    .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;border-top:1px solid var(--gray-100);padding-top:14px}
+
+    /* EDIT MODAL */
+    .edit-modal{width:400px}
+    .modal-field{margin-bottom:12px}
+    .modal-field label{display:block;font-size:11px;font-weight:600;color:var(--gray-600);margin-bottom:4px}
+    .modal-field input,.modal-field select{width:100%;padding:8px 11px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;outline:none}
+    .modal-field input:focus,.modal-field select:focus{border-color:var(--green)}
+
+    /* TOAST */
+    .toast-container{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:200;pointer-events:none}
+    .toast{background:var(--gray-800);color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:var(--shadow-md);display:flex;align-items:center;gap:8px;animation:slideIn .25s ease;max-width:340px}
+    .toast.success{background:#064E3B;border-left:4px solid var(--green)}
+    .toast.error{background:#7F1D1D;border-left:4px solid var(--red)}
+    .toast.info{background:#1E3A5F;border-left:4px solid var(--blue)}
+    @keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:translateX(0);opacity:1}}
+    @keyframes fadeOut{from{opacity:1}to{opacity:0}}
+
+    @media(max-width:900px){
+      .stats-bar{grid-template-columns:repeat(2,1fr)}
+      .stats-bar .stat-card:first-child{grid-column:1/-1}
+      .form-grid{grid-template-columns:repeat(2,1fr)}
+      .prices-grid{flex-direction:column}
+      .price-item{border-right:none;border-bottom:1px solid var(--gray-100)}
+    }
+  </style>
+</head>
+<body>
+
+<!-- PASSWORD SCREEN -->
+<div id="pwd-screen">
+  <div class="pwd-box">
+    <div class="pwd-logo">CH</div>
+    <div class="pwd-title">Liquidación de Facturas</div>
+    <div class="pwd-sub">Ingresá la contraseña para continuar</div>
+    <input id="pwd-input" class="pwd-input" type="password" placeholder="Contraseña" autocomplete="off"/>
+    <button class="pwd-btn" onclick="checkPassword()">Entrar</button>
+    <div id="pwd-error" class="pwd-error">Contraseña incorrecta, intentá de nuevo.</div>
+  </div>
+</div>
+
+<div id="app">
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">CH</div>
+    <h1>Liquidación de Facturas</h1>
+    <div class="period-pill">
+      Período:
+      <select id="period-select" onchange="updatePeriod()">
+        <option value="Mayo 2026" selected>Mayo 2026</option>
+        <option value="Junio 2026">Junio 2026</option>
+        <option value="Julio 2026">Julio 2026</option>
+        <option value="Abril 2026">Abril 2026</option>
+        <option value="Marzo 2026">Marzo 2026</option>
+      </select>
+    </div>
+  </div>
+  <div class="header-actions">
+    <div class="view-toggle">
+      <button class="active" onclick="switchView('ops')">Ops</button>
+      <button onclick="switchView('finance')">Finanzas</button>
+    </div>
+    <button class="btn btn-tally" onclick="openTallySync()" title="Importar nuevas respuestas del formulario Tally">⬆ Sincronizar Tally</button>
+    <button class="btn btn-outline" onclick="exportCSV()">⬇ Exportar CSV</button>
+    <button class="btn btn-primary" onclick="toggleForm()">+ Nueva factura</button>
+  </div>
+</div>
+
+<!-- OPS VIEW -->
+<div id="ops-view">
+  <!-- Resumen general -->
+  <div class="stats-bar" style="grid-template-columns:repeat(4,1fr)">
+    <div class="stat-card" style="border-left:3px solid var(--primary)">
+      <div class="stat-label">Total a liquidar</div>
+      <div class="stat-value green" id="stat-total">$0</div>
+      <div class="stat-sub" id="stat-period">Mayo 2026</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Facturas recibidas</div>
+      <div class="stat-value" id="stat-count">0</div>
+      <div class="stat-sub">contenidistas registrados</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Errores detectados</div>
+      <div class="stat-value red" id="stat-errors">0</div>
+      <div class="stat-sub" id="stat-errors-sub">Cargando…</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Mails enviados</div>
+      <div class="stat-value orange" id="stat-mails">0</div>
+      <div class="stat-sub" id="stat-mails-sub">de 0 total</div>
+    </div>
+  </div>
+  <!-- Totales por producto -->
+  <div class="stats-bar" style="grid-template-columns:repeat(5,1fr);padding-top:10px">
+    <div class="stat-card" style="border-left:3px solid #15803D">
+      <div class="stat-label">Workshops</div>
+      <div class="stat-value" id="stat-workshop" style="color:#15803D;font-size:17px">$0</div>
+      <div class="stat-sub" id="stat-workshop-sub">0 entregas</div>
+    </div>
+    <div class="stat-card" style="border-left:3px solid #A16207">
+      <div class="stat-label">Creación de Cursos</div>
+      <div class="stat-value" id="stat-curso" style="color:#A16207;font-size:17px">$0</div>
+      <div class="stat-sub" id="stat-curso-sub">0 entregas</div>
+    </div>
+    <div class="stat-card" style="border-left:3px solid #7C3AED">
+      <div class="stat-label">Live Sessions</div>
+      <div class="stat-value" id="stat-live" style="color:#7C3AED;font-size:17px">$0</div>
+      <div class="stat-sub" id="stat-live-sub">0 entregas</div>
+    </div>
+    <div class="stat-card" style="border-left:3px solid #0369A1">
+      <div class="stat-label">Diplomaturas</div>
+      <div class="stat-value" id="stat-diplomatura" style="color:#0369A1;font-size:17px">$0</div>
+      <div class="stat-sub" id="stat-diplomatura-sub">0 entregas</div>
+    </div>
+    <div class="stat-card" style="border-left:3px solid #BE185D">
+      <div class="stat-label">Asistente de Contenido</div>
+      <div class="stat-value" id="stat-asistente" style="color:#BE185D;font-size:17px">$0</div>
+      <div class="stat-sub" id="stat-asistente-sub">0 entregas</div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- ALERTS -->
+    <div class="panel">
+      <div class="panel-head clickable" onclick="toggleSection('alerts-body','alerts-icon')">
+        <h2>🔔 Alertas y validaciones <span id="alert-badge" class="badge badge-green">OK</span></h2>
+        <span id="alerts-icon" style="font-size:11px;color:var(--gray-400)">▼</span>
+      </div>
+      <div class="alerts-body" id="alerts-body"></div>
+    </div>
+
+    <!-- PRICES -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>💲 Tarifas de referencia</h2>
+        <span style="font-size:11px;color:var(--gray-400)">Clickeá "Editar" para actualizar montos</span>
+      </div>
+      <div class="prices-grid" id="prices-grid"></div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="panel">
+      <div class="table-toolbar">
+        <h2>📋 Facturas del período</h2>
+        <input type="text" class="search-input" placeholder="🔍 Buscar…" oninput="filterTable(this.value)"/>
+        <select class="filter-select" onchange="filterByProduct(this.value)">
+          <option value="">Todos los productos</option>
+          <option value="workshop">Workshop</option>
+          <option value="curso">Curso</option>
+          <option value="live">Live Sessions</option>
+          <option value="diplomatura">Diplomatura</option>
+          <option value="asistente">Asistente de Contenido</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre y apellido</th>
+              <th>Producto</th>
+              <th style="text-align:right">Unit.</th>
+              <th style="text-align:right">Cant.</th>
+              <th style="text-align:right">Total</th>
+              <th>Fecha envío</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div class="table-footer">
+        <span style="font-size:12px;color:var(--gray-600)" id="footer-count">0 facturas</span>
+        <span style="font-size:13px;font-weight:800">Total: <span id="footer-total">$0</span></span>
+      </div>
+    </div>
+
+    <!-- ADD FORM -->
+    <div class="panel" id="add-form-panel">
+      <div class="panel-head clickable" onclick="toggleForm()">
+        <h2>➕ Agregar nueva factura</h2>
+        <span id="form-icon" style="font-size:11px;color:var(--gray-400)">▼</span>
+      </div>
+      <div class="form-body" id="form-body">
+        <div class="form-grid">
+          <div class="form-field"><label>Nombre y apellido *</label><input type="text" id="f-name" placeholder="Ej: Juan García" oninput="previewEntry()"/></div>
+          <div class="form-field"><label>Email *</label><input type="email" id="f-email" placeholder="juan@email.com" oninput="previewEntry()"/></div>
+          <div class="form-field">
+            <label>Producto *</label>
+            <select id="f-product" onchange="onProductChange()">
+              <option value="">Seleccionar…</option>
+              <option value="workshop">Creación de Workshop</option>
+              <option value="curso">Creación de Curso</option>
+              <option value="live">Live Sessions</option>
+              <option value="diplomatura">Diplomatura</option>
+              <option value="asistente">Asistente de Contenido</option>
+            </select>
+          </div>
+          <div class="form-field"><label>Monto individual</label><input type="number" id="f-unit" placeholder="Auto-completado" oninput="previewEntry()"/></div>
+          <div class="form-field"><label>Cantidad</label><input type="number" id="f-qty" placeholder="Ej: 2" min="1" oninput="previewEntry()"/></div>
+          <div class="form-field">
+            <label>Mail enviado</label>
+            <select id="f-mail"><option value="no">No</option><option value="si">Sí</option></select>
+          </div>
+        </div>
+        <div class="form-preview" id="form-preview"></div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="addEntry()">Guardar factura</button>
+          <button class="btn btn-outline" onclick="clearForm()">Limpiar</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FINANCE VIEW -->
+<div id="finance-view">
+  <div class="finance-header">
+    <div>
+      <h1>Liquidación — Contenidistas & Workshops</h1>
+      <span style="font-size:12px;opacity:.6">Para Finanzas · <span id="finance-date"></span></span>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;opacity:.6">PERÍODO</div>
+      <div style="font-size:17px;font-weight:800" id="finance-period">Mayo 2026</div>
+    </div>
+  </div>
+  <div class="main" style="padding-top:16px">
+    <div class="fin-summary" id="fin-summary"></div>
+    <div id="fin-product-stats" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:0 24px 16px"></div>
+    <div id="fin-errors-wrap"></div>
+    <div class="fin-table-wrap" style="padding:0">
+      <div class="fin-table">
+        <table>
+          <thead><tr><th>#</th><th>Nombre y apellido</th><th>CUIT</th><th>CBU / Alias</th><th>Producto</th><th style="text-align:right">Cant.</th><th style="text-align:right">Total</th><th>Email</th><th>Fecha envío</th><th style="text-align:center">Factura</th></tr></thead>
+          <tbody id="fin-body"></tbody>
+          <tfoot id="fin-foot"></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TALLY SYNC MODAL -->
+<div class="modal-overlay" id="tally-modal">
+  <div class="modal">
+    <h3>⬆ Sincronizar desde Tally</h3>
+    <div class="modal-sub">Nuevas respuestas del formulario de facturas detectadas. Seleccioná las que querés importar al tablero.</div>
+    <div id="tally-rows-container"></div>
+    <div style="font-size:12px;color:var(--gray-400);margin-top:4px" id="tally-empty" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeTallyModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="importSelected()" id="import-btn">Importar seleccionados</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal edit-modal">
+    <h3>✏️ Editar factura</h3>
+    <input type="hidden" id="edit-id"/>
+    <div class="modal-field"><label>Nombre y apellido</label><input type="text" id="edit-name"/></div>
+    <div class="modal-field"><label>Email</label><input type="email" id="edit-email"/></div>
+    <div class="modal-field">
+      <label>Producto</label>
+      <select id="edit-product" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;outline:none" onchange="editProductChange()">
+        <option value="workshop">Creación de Workshop</option>
+        <option value="curso">Creación de Curso</option>
+        <option value="live">Live Sessions</option>
+        <option value="diplomatura">Diplomatura</option>
+        <option value="asistente">Asistente de Contenido</option>
+      </select>
+    </div>
+    <div class="modal-field"><label>Monto individual</label><input type="number" id="edit-unit"/></div>
+    <div class="modal-field"><label>Cantidad</label><input type="number" id="edit-qty" min="1"/></div>
+    <div class="modal-field"><label>CUIT</label><input type="text" id="edit-cuit" placeholder="Ej: 20123456789"/></div>
+    <div class="modal-field"><label>CBU / Alias</label><input type="text" id="edit-cbu" placeholder="Ej: 0000000000000000000000"/></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('edit-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIL PREVIEW MODAL -->
+<div class="modal-overlay" id="mail-modal">
+  <div class="modal" style="width:560px">
+    <h3>✉️ Mail de facturación</h3>
+    <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px">Para: <strong id="mail-to"></strong> · Asunto: <strong id="mail-subject"></strong></div>
+    <div id="mail-body-preview" style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:14px;font-size:13px;line-height:1.6;max-height:220px;overflow-y:auto;margin-bottom:10px"></div>
+    <div id="mail-error-box" style="display:none;background:#FFF5F5;border:1px solid #FED7D7;border-radius:8px;padding:10px 12px;font-size:12px;color:var(--red);margin-bottom:10px;word-break:break-all"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('mail-modal')">Cerrar</button>
+      <button class="btn btn-outline" onclick="copyMailText()" id="copy-mail-btn">📋 Copiar texto</button>
+      <button class="btn btn-primary" onclick="sendMailDraft()" id="send-draft-btn">📨 Crear borrador en Gmail</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const SHEET_ID = '1gQNCLK0fw8VndKAEvOhCW7w4J-Sou4du6pPfeIchSVc';
+const NOTION_FORM = 'https://tally.so/r/5BLpEN';
+const MONTHS_ES = { 'Enero':1,'Febrero':2,'Marzo':3,'Abril':4,'Mayo':5,'Junio':6,'Julio':7,'Agosto':8,'Septiembre':9,'Octubre':10,'Noviembre':11,'Diciembre':12 };
+
+const PRICES = {
+  workshop:   { label:'Creación de Workshop',    amount:50000,  color:'#15803D', bg:'#DCFCE7' },
+  curso:      { label:'Creación de Curso',       amount:80000,  color:'#A16207', bg:'#FEF9C3' },
+  live:       { label:'Live Sessions',           amount:400000, color:'#7C3AED', bg:'#EDE9FE' },
+  diplomatura:{ label:'Diplomatura',             amount:0,      color:'#0369A1', bg:'#E0F2FE' },
+  asistente:  { label:'Asistente de Contenido',  amount:700000, color:'#BE185D', bg:'#FFECF1' }
+};
+
+let invoices = [
+  { id:1,  name:'Gastón Klocker',    email:'gklocker73@gmail.com',           product:'workshop', unit:50000,  qty:4,    mailStatus:'sent', driveUrl:null, invoiceFile:null,        cuit:'20378215561', cbu:'0200925811000013477608', submittedAt:null, fromTally:false },
+  { id:2,  name:'Paula Muñoz',       email:'paula.munoz.ricciardi@gmail.com',product:'workshop', unit:50000,  qty:1,    mailStatus:'sent', driveUrl:null, invoiceFile:null,        cuit:'24405969110', cbu:'2850405040095428013198', submittedAt:null, fromTally:false },
+  { id:3,  name:'Jorge Miro',        email:'miro.jorge1@gmail.com',          product:'workshop', unit:50000,  qty:3,    mailStatus:'sent', driveUrl:null, invoiceFile:null,        cuit:'20322778288', cbu:'0440025740000325190299', submittedAt:null, fromTally:false },
+  { id:4,  name:'Emiliano Perez',    email:'emi.perez997@gmail.com',         product:'workshop', unit:50000,  qty:4,    mailStatus:'sent', driveUrl:null, invoiceFile:null,        cuit:'20401280953', cbu:'0070136130004036464909', submittedAt:null, fromTally:false },
+  { id:5,  name:'Laura Therisod',    email:'lauratherisod@gmail.com',        product:'workshop', unit:50000,  qty:2,    mailStatus:'sent', driveUrl:'https://drive.google.com/file/d/1a3YRNUYCi0pw4F4bPArdYJ7QNlUxo8xX/view', invoiceFile:'therisod.pdf', cuit:'27333163247', cbu:'0170097840000035654728', submittedAt:null, fromTally:false },
+  { id:6,  name:'Lorena Bincaz',     email:'loremmabincaz@gmail.com',        product:'workshop', unit:50000,  qty:1,    mailStatus:'sent', driveUrl:null, invoiceFile:'lorena.pdf', cuit:'27269501400', cbu:'3840200500000005295379', submittedAt:null, fromTally:false },
+  { id:7,  name:'Matias Armándola',  email:'marmandola@hotmail.com',         product:'curso',    unit:80000,  qty:2,    mailStatus:'sent', driveUrl:null, invoiceFile:null,        cuit:'20319993437', cbu:'0070689230004003724900', submittedAt:null, fromTally:false },
+  { id:8,  name:'Matias Miro',       email:'mati_miro@hotmail.com',          product:'curso',    unit:80000,  qty:3,    mailStatus:'sent', driveUrl:null, invoiceFile:null,        cuit:'20332142632', cbu:'0070071930004073370913', submittedAt:null, fromTally:false },
+  { id:9,  name:'Melisa Braslavsky', email:'melisa.braslavsky@gmail.com',    product:'live',     unit:400000, qty:null, mailStatus:'sent', driveUrl:null, invoiceFile:'melisa.pdf', cuit:'27367028608', cbu:'1430001713003022710012', submittedAt:null, fromTally:false }
+];
+let nextId = 10;
+let searchQuery = '', productFilter = '';
+let tallyPendingRows = [];
+let selectedTallyRows = new Set();
+
+// ─── MCP WRAPPER ──────────────────────────────────────────────────────────
+async function callMcp(tool, args) {
+  // Retry up to 3 times with 500ms delay if window.cowork isn't ready yet
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (window.cowork?.callMcpTool) return callMcp(tool, args);
+    await new Promise(r => setTimeout(r, 500));
+  }
+  throw new Error('Conexión con Cowork no disponible. Cerrá y volvé a abrir el tablero.');
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────
+const fmt = n => n != null ? '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:0}) : '–';
+const total = inv => (inv.unit && inv.qty) ? inv.unit * inv.qty : (inv.unit || 0);
+function getPaymentDate() {
+  const period = document.getElementById('period-select').value;
+  const parts = period.split(' ');
+  const m = MONTHS_ES[parts[0]] || 5;
+  return `15/${m}`;
+}
+function getPeriodLabel() { return document.getElementById('period-select').value; }
+
+function validateInvoice(inv) {
+  const errs = [];
+  const ref = PRICES[inv.product];
+  if (!inv.name?.trim()) errs.push({ type:'error', msg:'Falta nombre.' });
+  if (!inv.email?.includes('@')) errs.push({ type:'error', msg:'Email inválido.' });
+  if (ref && ref.amount > 0 && inv.unit !== ref.amount) errs.push({ type:'error', msg:`Monto incorrecto: debería ser ${fmt(ref.amount)}, tiene ${fmt(inv.unit)}.` });
+  if (!['live','asistente'].includes(inv.product) && (!inv.qty || inv.qty < 1)) errs.push({ type:'warning', msg:'Cantidad no especificada.' });
+  if (!inv.driveUrl && !inv.invoiceFile) errs.push({ type:'warning', msg:'Factura no adjuntada.' });
+  return errs;
+}
+
+// Ops = entradas manuales de Cami | Tally = respuestas de profesores
+const opsInvoices  = () => invoices.filter(i => !i.fromTally);
+const tallyInvoices = () => invoices.filter(i =>  i.fromTally);
+
+function getDuplicates() {
+  const seen = {}, dupes = [];
+  opsInvoices().forEach(inv => {
+    const key = inv.email.toLowerCase() + '_' + inv.product;
+    if (seen[key]) dupes.push(inv.name); else seen[key] = true;
+  });
+  return dupes;
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────
+function renderPrices() {
+  document.getElementById('prices-grid').innerHTML = Object.entries(PRICES).map(([k, p]) => `
+    <div class="price-item">
+      <div class="price-product">${p.label}</div>
+      <div class="price-row">
+        <span class="price-dot" style="background:${p.color}"></span>
+        <span class="price-amount">${fmt(p.amount)}</span>
+        <button class="price-edit" onclick="editPrice('${k}')">Editar</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderAlerts() {
+  const alerts = [];
+  getDuplicates().forEach(n => alerts.push({ type:'error', msg:`<strong>Duplicado:</strong> ${n} ya tiene una factura para este producto.` }));
+  opsInvoices().forEach(inv => validateInvoice(inv).forEach(e => alerts.push({ type:e.type, msg:`<strong>${inv.name}:</strong> ${e.msg}` })));
+  const badge = document.getElementById('alert-badge');
+  const body = document.getElementById('alerts-body');
+  if (!alerts.length) {
+    badge.className = 'badge badge-green'; badge.textContent = 'OK';
+    body.innerHTML = `<div class="no-errors">✅ Sin errores — todas las facturas son válidas.</div>`;
+  } else {
+    badge.className = 'badge badge-red'; badge.textContent = alerts.length;
+    body.innerHTML = alerts.map(a => `<div class="alert-item ${a.type === 'error' ? 'error' : 'warning'}"><span style="font-size:14px;flex-shrink:0">${a.type === 'error' ? '🚨' : '⚠️'}</span><span>${a.msg}</span></div>`).join('');
+  }
+  const errCount = alerts.filter(a => a.type === 'error').length;
+  document.getElementById('stat-errors').textContent = errCount;
+  document.getElementById('stat-errors-sub').textContent = errCount ? `${errCount} error${errCount > 1 ? 'es' : ''} a revisar` : 'Todo OK ✓';
+}
+
+function renderTable() {
+  const q = searchQuery.toLowerCase(), pf = productFilter;
+  const visible = opsInvoices().filter(inv => {
+    const mQ = !q || inv.name.toLowerCase().includes(q) || inv.email.toLowerCase().includes(q);
+    const mP = !pf || inv.product === pf;
+    return mQ && mP;
+  });
+  const chips = { workshop:'chip-workshop', curso:'chip-curso', live:'chip-live', diplomatura:'chip-diplomatura', asistente:'chip-asistente' };
+  document.getElementById('table-body').innerHTML = visible.map(inv => {
+    const errs = validateInvoice(inv);
+    const hasErr = errs.some(e => e.type === 'error');
+    const p = PRICES[inv.product];
+    const t = total(inv);
+    const mailIcon = { pending:'✉️', sending:'⏳', sent:'✅', error:'❌' }[inv.mailStatus] || '✉️';
+    const mailTitle = { pending:'Enviar mail de aviso', sending:'Enviando…', sent:'Mail enviado — clic para reenviar', error:'Error al enviar — reintentar' }[inv.mailStatus] || 'Enviar mail';
+    const hasInvoice = inv.driveUrl || inv.invoiceFile;
+    const driveIcon = inv.driveUrl ? '📄' : (inv.invoiceFile ? '🔍' : '❓');
+    const driveTitle = inv.driveUrl ? 'Ver factura en Drive' : (inv.invoiceFile ? `Buscar "${inv.invoiceFile}" en Drive` : 'Sin factura cargada');
+    const cuitInfo = inv.cuit ? `<div class="td-email">CUIT ${inv.cuit}</div>` : '';
+    const submittedInfo = inv.submittedAt ? `<div class="td-email" style="color:var(--green)">📅 ${formatSubmittedAt(inv.submittedAt)}</div>` : '';
+    return `<tr class="${hasErr ? 'has-error' : ''} ${inv.fromTally ? 'from-tally' : ''}">
+      <td><div class="td-name">${inv.name}${inv.fromTally ? '<span class="tally-tag">TALLY</span>' : ''}</div><div class="td-email">${inv.email}</div>${cuitInfo}${submittedInfo}</td>
+      <td><span class="product-chip ${chips[inv.product]}">${p.label}</span></td>
+      <td class="td-num">${fmt(inv.unit)}</td>
+      <td class="td-num">${inv.qty != null ? inv.qty : '–'}</td>
+      <td class="td-total">${fmt(t)}</td>
+      <td style="font-size:11px;color:var(--gray-600);white-space:nowrap">${inv.submittedAt ? formatSubmittedAt(inv.submittedAt) : '<span style="color:var(--gray-300)">–</span>'}</td>
+      <td><div class="status-cell">${renderStatus(errs)}</div></td>
+      <td><div class="actions-cell">
+        <button class="icon-btn mail-${inv.mailStatus}" title="${mailTitle}" onclick="sendMail(${inv.id})">${mailIcon}</button>
+        <button class="icon-btn ${inv.driveUrl ? 'drive-saved' : (inv.invoiceFile ? '' : 'disabled')}" title="${driveTitle}" onclick="viewInvoice(${inv.id})" ${!hasInvoice ? 'style="opacity:.35;cursor:not-allowed"' : ''}>${driveIcon}</button>
+        <button class="icon-btn" title="Editar" onclick="openEdit(${inv.id})">✏️</button>
+        <button class="icon-btn delete" title="Eliminar" onclick="deleteEntry(${inv.id})">🗑️</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  const visTotal = visible.reduce((s, inv) => s + total(inv), 0);
+  document.getElementById('footer-count').textContent = `${visible.length} factura${visible.length !== 1 ? 's' : ''}`;
+  document.getElementById('footer-total').textContent = fmt(visTotal);
+  renderStats();
+}
+
+function renderStatus(errs) {
+  if (!errs.length) return `<span class="err-flag ok">✓ OK</span>`;
+  return errs.map(e => `<span class="err-flag ${e.type === 'error' ? 'err' : 'warn'}">${e.type === 'error' ? '✗' : '!'} ${e.msg.split(':').pop().trim().split('.')[0]}</span>`).join('');
+}
+
+function renderStats() {
+  const ops = opsInvoices();
+  const grandTotal = ops.reduce((s, inv) => s + total(inv), 0);
+  document.getElementById('stat-total').textContent = fmt(grandTotal);
+  document.getElementById('stat-period').textContent = getPeriodLabel();
+  document.getElementById('stat-count').textContent = ops.length;
+  const sent = ops.filter(i => i.mailStatus === 'sent').length;
+  document.getElementById('stat-mails').textContent = sent;
+  document.getElementById('stat-mails-sub').textContent = `de ${ops.length} total`;
+  ['workshop','curso','live','diplomatura','asistente'].forEach(p => {
+    const items = ops.filter(i => i.product === p);
+    const t = items.reduce((s, i) => s + total(i), 0);
+    const el = document.getElementById('stat-' + p);
+    const sub = document.getElementById('stat-' + p + '-sub');
+    if (el) el.textContent = fmt(t);
+    if (sub) sub.textContent = items.length + (items.length === 1 ? ' entrega' : ' entregas');
+  });
+}
+
+function renderFinanceView() {
+  const period = getPeriodLabel();
+  document.getElementById('finance-period').textContent = period;
+  document.getElementById('finance-date').textContent = new Date().toLocaleDateString('es-AR', {day:'2-digit',month:'long',year:'numeric'});
+  const tally = tallyInvoices();
+  const grandTotal = tally.reduce((s, inv) => s + total(inv), 0);
+  document.getElementById('fin-summary').innerHTML = `
+    <div class="fin-stat"><div class="lbl">Total a pagar</div><div class="val">${fmt(grandTotal)}</div></div>
+    <div class="fin-stat"><div class="lbl">Facturas recibidas</div><div class="val">${tally.length}</div></div>
+    <div class="fin-stat"><div class="lbl">Período</div><div class="val" style="font-size:16px">${period}</div></div>`;
+  const productDefs = [
+    { key:'workshop',    label:'Workshops',              color:'#15803D' },
+    { key:'curso',       label:'Creación de Cursos',     color:'#A16207' },
+    { key:'live',        label:'Live Sessions',          color:'#7C3AED' },
+    { key:'diplomatura', label:'Diplomaturas',           color:'#0369A1' },
+    { key:'asistente',   label:'Asistente de Contenido', color:'#BE185D' }
+  ];
+  document.getElementById('fin-product-stats').innerHTML = productDefs.map(function(pd) {
+    const items = tally.filter(function(i){ return i.product === pd.key; });
+    const t = items.reduce(function(s,i){ return s + total(i); }, 0);
+    return '<div style="background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.08);border-left:3px solid ' + pd.color + '">' +
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#585858;margin-bottom:4px">' + pd.label + '</div>' +
+      '<div style="font-size:18px;font-weight:800;color:' + pd.color + '">' + fmt(t) + '</div>' +
+      '<div style="font-size:11px;color:#BBBBBB;margin-top:2px">' + items.length + (items.length === 1 ? ' entrega' : ' entregas') + '</div>' +
+      '</div>';
+  }).join('');
+
+  const errs = [];
+  tally.forEach(inv => validateInvoice(inv).filter(e => e.type === 'error').forEach(e => errs.push(`${inv.name}: ${e.msg}`)));
+  document.getElementById('fin-errors-wrap').innerHTML = errs.length
+    ? `<div class="fin-note">⚠️ <strong>${errs.length} error${errs.length > 1 ? 'es' : ''} detectado${errs.length > 1 ? 's' : ''}:</strong> ${errs.join(' · ')}</div>` : '';
+  const chips = { workshop:'chip-workshop', curso:'chip-curso', live:'chip-live', diplomatura:'chip-diplomatura', asistente:'chip-asistente' };
+  document.getElementById('fin-body').innerHTML = tally.map(function(inv, i) {
+    const dateCell = inv.submittedAt
+      ? formatSubmittedAt(inv.submittedAt)
+      : '<span style="color:var(--gray-300)">–</span>';
+    let invoiceCell;
+    if (inv.driveUrl) {
+      invoiceCell = '<a href="' + inv.driveUrl + '" target="_blank" title="Ver factura" style="font-size:18px;text-decoration:none">📄</a>';
+    } else if (inv.invoiceFile) {
+      invoiceCell = '<span title="' + inv.invoiceFile + '" style="font-size:16px;opacity:.7;cursor:pointer" onclick="viewInvoice(' + inv.id + ')">🔍</span>';
+    } else {
+      invoiceCell = '<span title="Sin factura cargada" style="font-size:16px;opacity:.3">📄</span>';
+    }
+    return '<tr>' +
+      '<td>' + (i+1) + '</td>' +
+      '<td><strong>' + inv.name + '</strong></td>' +
+      '<td style="font-size:12px;font-family:monospace">' + (inv.cuit || '<span style="color:var(--gray-400)">–</span>') + '</td>' +
+      '<td style="font-size:11px;font-family:monospace;max-width:170px;overflow:hidden;text-overflow:ellipsis">' + (inv.cbu || '<span style="color:var(--gray-400)">–</span>') + '</td>' +
+      '<td><span class="product-chip ' + chips[inv.product] + '">' + PRICES[inv.product].label + '</span></td>' +
+      '<td style="text-align:right">' + (inv.qty != null ? inv.qty : '–') + '</td>' +
+      '<td style="text-align:right;font-weight:800">' + fmt(total(inv)) + '</td>' +
+      '<td style="color:var(--gray-600);font-size:12px">' + inv.email + '</td>' +
+      '<td style="font-size:11px;color:var(--gray-600);white-space:nowrap">' + dateCell + '</td>' +
+      '<td style="text-align:center;width:52px">' + invoiceCell + '</td>' +
+      '</tr>';
+  }).join('');
+  if (!tally.length) {
+    document.getElementById('fin-body').innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--gray-400)">⏳ Todavía no hay facturas recibidas vía Tally. Sincronizá cuando los profesores las envíen.</td></tr>`;
+  }
+  document.getElementById('fin-foot').innerHTML = tally.length
+    ? `<tr><td colspan="6" style="text-align:right;font-weight:700">TOTAL</td><td style="text-align:right;font-size:15px;font-weight:900">${fmt(grandTotal)}</td><td colspan="3"></td></tr>`
+    : '';
+}
+
+function renderAll() {
+  renderPrices();
+  renderAlerts();
+  renderTable();
+}
+
+// ─── EMAIL ────────────────────────────────────────────────────────────────
+let _currentMailId = null;
+let _currentMailHtml = '';
+let _currentMailSubject = '';
+let _currentMailTo = '';
+
+function buildMailBody(inv) {
+  const period = getPeriodLabel();
+  const payDate = getPaymentDate();
+  const t = total(inv);
+  const productName = PRICES[inv.product].label.toLowerCase();
+  const firstName = inv.name.split(' ')[0];
+  const subject = `Recordatorio de facturación — ${period}`;
+  const htmlBody = `<p>Hola ${firstName},</p>
+<p>Queremos agradecerte por tu compromiso y dedicación en la ${productName}. Estamos muy contentos con los avances logrados y con el esfuerzo que pusiste en este trabajo.</p>
+<p>Para poder avanzar con el pago correspondiente, necesitamos que hoy mismo nos envíes la factura por el trabajo realizado adjuntándola en <a href="${NOTION_FORM}">este formulario</a>. Es importante que verifiques que estén completos todos los campos necesarios.</p>
+<p>Recordá que el pago se acreditará el ${payDate}. En tu caso:</p>
+<ul>
+${inv.qty != null ? `<li><strong>Cantidad de unidades realizadas:</strong> ${inv.qty}</li>` : ''}
+<li><strong>Honorarios:</strong> ${fmt(t)}</li>
+</ul>
+<p>¡Muchas gracias por tu colaboración!</p>
+<p>Saludos,<br>Equipo Coderhouse</p>`;
+  return { subject, htmlBody };
+}
+
+function sendMail(id) {
+  const inv = invoices.find(i => i.id === id);
+  if (!inv) return;
+  if (inv.mailStatus === 'sending') return;
+
+  const { subject, htmlBody } = buildMailBody(inv);
+  _currentMailId = id;
+  _currentMailHtml = htmlBody;
+  _currentMailSubject = subject;
+  _currentMailTo = inv.email;
+
+  document.getElementById('mail-to').textContent = inv.email;
+  document.getElementById('mail-subject').textContent = subject;
+  document.getElementById('mail-body-preview').innerHTML = htmlBody;
+  document.getElementById('send-draft-btn').textContent = '📨 Crear borrador en Gmail';
+  document.getElementById('send-draft-btn').disabled = false;
+  document.getElementById('mail-modal').classList.add('open');
+}
+
+async function sendMailDraft() {
+  const inv = invoices.find(i => i.id === _currentMailId);
+  if (!inv) return;
+  const btn = document.getElementById('send-draft-btn');
+  const errBox = document.getElementById('mail-error-box');
+  btn.disabled = true;
+  btn.textContent = '⏳ Creando borrador…';
+  errBox.style.display = 'none';
+
+  // Fallback: si no hay window.cowork (Chrome local), abrir mailto:
+  if (!window.cowork?.callMcpTool) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = _currentMailHtml;
+    const plainBody = tmp.innerText;
+    const mailtoLink = `mailto:${encodeURIComponent(_currentMailTo)}?subject=${encodeURIComponent(_currentMailSubject)}&body=${encodeURIComponent(plainBody)}`;
+    window.open(mailtoLink, '_blank');
+    btn.disabled = false;
+    btn.textContent = '📨 Crear borrador en Gmail';
+    showToast('📬 Abriendo Gmail con el mail pre-armado…', 'success');
+    return;
+  }
+
+  try {
+    let mailResult;
+    try {
+      mailResult = await window.cowork.callMcpTool('mcp__ff2884e9-cfd1-4631-99f5-38ced2f8df40__create_draft', {
+        to: [inv.email],
+        subject: _currentMailSubject,
+        htmlBody: _currentMailHtml
+      });
+    } catch(callErr) {
+      throw new Error('callMcpTool falló: ' + (callErr?.message || String(callErr)));
+    }
+
+    // Mostrar respuesta cruda para debug si hay error
+    const rawText = mailResult?.content?.[0]?.text || JSON.stringify(mailResult);
+    const isErr = mailResult?.isError === true ||
+      (rawText && rawText.toLowerCase().includes('"iserror":true'));
+
+    if (isErr) throw new Error('MCP respondió error: ' + rawText.slice(0, 200));
+
+    inv.mailStatus = 'sent';
+    renderTable();
+    closeModal('mail-modal');
+    showToast(`✅ Borrador creado en Gmail para ${inv.name} — revisalo antes de enviar`, 'success');
+  } catch (e) {
+    inv.mailStatus = 'error';
+    renderTable();
+    btn.disabled = false;
+    btn.textContent = '📨 Reintentar';
+    errBox.style.display = 'block';
+    errBox.innerHTML = '❌ <strong>Error:</strong> ' + (e.message || String(e)) + '<br><small>Usá "Copiar texto" para mandarlo manualmente desde tu Gmail.</small>';
+  }
+}
+
+function copyMailText() {
+  const inv = invoices.find(i => i.id === _currentMailId);
+  const name = inv ? inv.name : '';
+  // Strip HTML tags para el portapapeles
+  const tmp = document.createElement('div');
+  tmp.innerHTML = _currentMailHtml;
+  const plain = `Para: ${_currentMailTo}\nAsunto: ${_currentMailSubject}\n\n${tmp.innerText}`;
+  navigator.clipboard.writeText(plain).then(() => {
+    showToast('📋 Mail copiado al portapapeles', 'success');
+    document.getElementById('copy-mail-btn').textContent = '✅ Copiado!';
+    setTimeout(() => { document.getElementById('copy-mail-btn').textContent = '📋 Copiar texto'; }, 2000);
+  }).catch(() => {
+    showToast('No se pudo copiar automáticamente', 'error');
+  });
+}
+
+// ─── HELPERS DE FECHA ─────────────────────────────────────────────────────
+function formatSubmittedAt(raw) {
+  if (!raw) return '';
+  // Tally envía "2026-05-08 14:32:00" o ISO "2026-05-08T14:32:00.000Z"
+  try {
+    const d = new Date(raw.replace(' ', 'T'));
+    if (isNaN(d)) return raw;
+    return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' })
+      + ' ' + d.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+  } catch { return raw; }
+}
+
+function isTallyUrl(str) {
+  return str && (str.startsWith('http://') || str.startsWith('https://'));
+}
+
+// ─── VIEW INVOICE ─────────────────────────────────────────────────────────
+// Maneja 3 casos:
+//   1. Ya tenemos driveUrl → abrir directo
+//   2. invoiceFile es una URL de Tally storage → abrir directo
+//   3. invoiceFile es un nombre de archivo → buscar en Drive
+async function viewInvoice(id) {
+  const inv = invoices.find(i => i.id === id);
+  if (!inv) return;
+
+  // Caso 1: URL ya resuelta
+  if (inv.driveUrl) { window.open(inv.driveUrl, '_blank'); return; }
+
+  if (!inv.invoiceFile) { showToast('Sin factura cargada para este contenidista', 'error'); return; }
+
+  // Caso 2: La factura viene de Tally (URL directa)
+  if (isTallyUrl(inv.invoiceFile)) {
+    inv.driveUrl = inv.invoiceFile;
+    renderTable();
+    window.open(inv.invoiceFile, '_blank');
+    showToast(`📄 Abriendo factura de ${inv.name}`, 'success');
+    return;
+  }
+
+  // Caso 3: Buscar por nombre en Drive
+  showToast(`🔍 Buscando "${inv.invoiceFile}" en Drive…`, 'info');
+  try {
+    // Helper: extract files array from MCP-wrapped response
+    function parseDriveFiles(r) {
+      if (r?.isError) return [];
+      try { return JSON.parse(r?.content?.[0]?.text || '{}')?.files || []; } catch(e2) { return r?.files || []; }
+    }
+    const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__search_files', {
+      query: `title = '${inv.invoiceFile.replace(/'/g, "\\'")}'`,
+      pageSize: 5
+    });
+    const files = parseDriveFiles(result);
+    if (files.length > 0) {
+      const f = files[0];
+      inv.driveUrl = f.viewUrl || `https://drive.google.com/file/d/${f.id}/view`;
+      renderTable();
+      window.open(inv.driveUrl, '_blank');
+      showToast(`📄 Factura de ${inv.name} encontrada en Drive`, 'success');
+    } else {
+      // Fallback: buscar por apellido del contenidista
+      const apellido = inv.name.trim().split(' ').pop().toLowerCase();
+      const fb = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__search_files', {
+        query: `title contains '${apellido}' and mimeType = 'application/pdf'`,
+        pageSize: 5
+      });
+      const fbFiles = parseDriveFiles(fb);
+      if (fbFiles.length > 0) {
+        const f = fbFiles[0];
+        inv.driveUrl = f.viewUrl || `https://drive.google.com/file/d/${f.id}/view`;
+        renderTable();
+        window.open(inv.driveUrl, '_blank');
+        showToast(`📄 Factura encontrada (verificar que sea la correcta)`, 'success');
+      } else {
+        showToast(`⚠️ No se encontró "${inv.invoiceFile}" en Drive`, 'error');
+      }
+    }
+  } catch(e) {
+    showToast(`❌ Error buscando en Drive: ${e.message || e}`, 'error');
+  }
+}
+
+// ─── PDF GENERATOR ────────────────────────────────────────────────────────
+function buildInvoicePDF(inv) {
+  const period = getPeriodLabel();
+  const payDate = getPaymentDate();
+  const t = total(inv);
+  const today = new Date().toLocaleDateString('es-AR');
+  // Sanitize for PDF string syntax (ASCII only, escape parens/backslash)
+  const san = s => (s||'')
+    .replace(/[áàâä]/gi, c => c===c.toUpperCase()?'A':'a')
+    .replace(/[éèêë]/gi, c => c===c.toUpperCase()?'E':'e')
+    .replace(/[íìîï]/gi, c => c===c.toUpperCase()?'I':'i')
+    .replace(/[óòôö]/gi, c => c===c.toUpperCase()?'O':'o')
+    .replace(/[úùûü]/gi, c => c===c.toUpperCase()?'U':'u')
+    .replace(/[ñ]/g,'n').replace(/[Ñ]/g,'N')
+    .replace(/[()\\]/g, c => '\\' + c)
+    .replace(/[^\x20-\x7E]/g, '?');
+  const fmtP = n => n != null ? '$' + Number(n).toLocaleString('es-AR',{minimumFractionDigits:0}) : '';
+  // Helper to produce a positioned text operator
+  const txt = (x, y, font, size, str) => `BT /F${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${san(str)}) Tj ET`;
+
+  const cs = [
+    // Black header band
+    '0 0 0 rg', '0 700 612 92 re f',
+    // Header text (white)
+    '1 1 1 rg',
+    txt(40, 752, 2, 22, 'CODERHOUSE'),
+    txt(40, 728, 1, 10, 'Comprobante de Liquidacion'),
+    txt(300, 728, 1, 10, period),
+    // Section title
+    '0 0 0 rg',
+    txt(40, 668, 2, 12, 'Detalle de pago'),
+    // Dividers
+    '0.80 0.80 0.80 RG 0.5 w 40 658 m 572 658 l S',
+    // Row 1 labels (gray)
+    '0.50 0.50 0.50 rg',
+    txt(40,  641, 1, 7.5, 'NOMBRE Y APELLIDO'),
+    txt(310, 641, 1, 7.5, 'PRODUCTO'),
+    // Row 1 values (black)
+    '0 0 0 rg',
+    txt(40,  624, 2, 11, inv.name),
+    txt(310, 624, 1, 11, PRICES[inv.product].label),
+    '0.93 0.93 0.93 RG 0.4 w 40 613 m 572 613 l S',
+    // Row 2 labels
+    '0.50 0.50 0.50 rg',
+    txt(40,  600, 1, 7.5, 'EMAIL'),
+    txt(310, 600, 1, 7.5, 'FECHA DE PAGO'),
+    // Row 2 values
+    '0 0 0 rg',
+    txt(40,  584, 1, 10, inv.email),
+    txt(310, 584, 2, 11, payDate),
+    '0.93 0.93 0.93 RG 0.4 w 40 573 m 572 573 l S',
+    // Row 3 labels
+    '0.50 0.50 0.50 rg',
+    txt(40,  560, 1, 7.5, 'MONTO POR UNIDAD'),
+    inv.qty != null ? txt(310, 560, 1, 7.5, 'CANTIDAD') : '',
+    // Row 3 values
+    '0 0 0 rg',
+    txt(40,  544, 1, 11, fmtP(inv.unit)),
+    inv.qty != null ? txt(310, 544, 2, 11, String(inv.qty)) : '',
+    // Total box (dark)
+    '0.05 0.05 0.05 rg', '40 450 532 72 re f',
+    '1 1 1 rg',
+    txt(55, 510, 1, 8,  'TOTAL A COBRAR'),
+    txt(55, 466, 2, 28, fmtP(t)),
+    // Footer rule + text
+    '0.80 0.80 0.80 RG 0.4 w 40 52 m 572 52 l S',
+    '0.60 0.60 0.60 rg',
+    txt(40,  38, 1, 8, 'Emitido por Coderhouse Ops - ' + today),
+    txt(410, 38, 1, 8, 'Pago acreditado: ' + payDate),
+  ].filter(Boolean).join('\n');
+
+  // Build objects
+  const o1 = '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n';
+  const o2 = '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n';
+  const o3 = '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>\nendobj\n';
+  const o4 = `4 0 obj\n<< /Length ${cs.length} >>\nstream\n${cs}\nendstream\nendobj\n`;
+  const o5 = '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n';
+  const o6 = '6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n';
+  const allObjs = [o1, o2, o3, o4, o5, o6];
+
+  let hdr = '%PDF-1.4\n', pos = hdr.length;
+  const xPos = [];
+  allObjs.forEach(o => { xPos.push(pos); pos += o.length; });
+  const xrefStart = pos;
+  const xref = `xref\n0 7\n0000000000 65535 f \n${xPos.map(p => String(p).padStart(10,'0') + ' 00000 n ').join('\n')}\n`;
+  const trailer = `trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  return hdr + allObjs.join('') + xref + trailer;
+}
+
+// ─── DRIVE ────────────────────────────────────────────────────────────────
+async function saveToDrive(id) {
+  const inv = invoices.find(i => i.id === id);
+  if (!inv) return;
+  const period = getPeriodLabel();
+
+  showToast('💾 Generando PDF y subiendo a Drive…', 'info');
+  try {
+    const pdfStr = buildInvoicePDF(inv);
+    const b64 = btoa(pdfStr);
+    const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__create_file', {
+      title: `Factura_${inv.name.replace(/\s+/g,'_')}_${period.replace(' ','_')}.pdf`,
+      base64Content: b64,
+      contentMimeType: 'application/pdf',
+      disableConversionToGoogleType: true
+    });
+    if (result?.isError) throw new Error(result.content?.[0]?.text || 'Error al subir a Drive');
+    // Parse MCP response: actual output is in content[0].text as JSON
+    let url = null;
+    try {
+      const parsed = JSON.parse(result?.content?.[0]?.text || '{}');
+      url = parsed.alternateLink || parsed.webViewLink || (parsed.id ? `https://drive.google.com/file/d/${parsed.id}/view` : null);
+    } catch(e2) { /* use fallback */ }
+    inv.driveUrl = url || 'https://drive.google.com';
+    renderTable();
+    showToast(`📄 PDF guardado en Drive: ${inv.name}`, 'success');
+  } catch (e) {
+    showToast(`❌ Error al guardar PDF en Drive: ${e.message || e}`, 'error');
+  }
+}
+
+// ─── TALLY SYNC ───────────────────────────────────────────────────────────
+async function openTallySync() {
+  showToast('🔄 Leyendo respuestas del formulario…', 'info');
+  document.getElementById('tally-rows-container').innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400)">⏳ Cargando datos de Tally…</div>';
+  document.getElementById('tally-modal').classList.add('open');
+  selectedTallyRows.clear();
+  try {
+    // callMcpTool returns MCP format: {content:[{type:"text",text:"...json..."}], isError:bool}
+    const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__download_file_content', {
+      fileId: SHEET_ID,
+      exportMimeType: 'text/csv'
+    });
+
+    // Check for MCP-level error
+    if (result?.isError) throw new Error(result.content?.[0]?.text || 'MCP error');
+
+    // Extract the actual tool output text
+    const toolText = (result?.content?.[0]?.text) || (typeof result === 'string' ? result : JSON.stringify(result));
+
+    // Parse tool output JSON to get the base64 content
+    let b64 = null;
+    try {
+      const parsed = JSON.parse(toolText);
+      b64 = parsed?.content || parsed?.fileContent || null;
+    } catch(e2) {
+      b64 = toolText; // maybe it's raw base64 directly
+    }
+    if (!b64) throw new Error('No se pudo extraer contenido del Sheet');
+
+    // Decode base64 → CSV without using atob (custom decoder, avoids DOMException)
+    const csvText = decodeBase64UTF8(b64.replace(/\s/g,''));
+    parseTallyContent(csvText);
+  } catch (e) {
+    document.getElementById('tally-rows-container').innerHTML = '<div style="color:var(--red);padding:12px">❌ Error: ' + (e.message || e) + '</div>';
+  }
+}
+
+// Custom base64 decoder — avoids atob() DOMException issues
+function decodeBase64UTF8(b64) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const clean = b64.replace(/[^A-Za-z0-9+/=]/g, '');
+  const bytes = [];
+  for (let i = 0; i < clean.length; i += 4) {
+    const a = chars.indexOf(clean[i]);
+    const b = chars.indexOf(clean[i+1]);
+    const c = clean[i+2] === '=' ? 0 : chars.indexOf(clean[i+2]);
+    const d = clean[i+3] === '=' ? 0 : chars.indexOf(clean[i+3]);
+    bytes.push((a << 2) | (b >> 4));
+    if (clean[i+2] !== '=') bytes.push(((b & 0xF) << 4) | (c >> 2));
+    if (clean[i+3] !== '=') bytes.push(((c & 0x3) << 6) | d);
+  }
+  return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+}
+
+// Simple CSV parser that handles quoted fields
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuote && line[i+1] === '"') { cur += '"'; i++; }
+      else inQuote = !inQuote;
+    } else if (ch === ',' && !inQuote) {
+      result.push(cur.trim()); cur = '';
+    } else { cur += ch; }
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+function parseTallyContent(rawText) {
+  // Normalize line endings and split
+  const lines = rawText.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l => l.trim().length > 0);
+  if (lines.length < 2) {
+    document.getElementById('tally-rows-container').innerHTML =
+      '<div style="padding:12px"><div style="color:var(--gray-400)">No hay respuestas en el formulario aún.</div>' +
+      '<details style="margin-top:8px;font-size:11px"><summary>🔍 Debug (primeros 500 chars)</summary>' +
+      '<pre style="background:#f5f5f5;padding:8px;font-size:10px;white-space:pre-wrap;overflow:auto;max-height:200px">' +
+      rawText.substring(0,500).replace(/</g,'&lt;') + '</pre></details></div>';
+    return;
+  }
+
+  // Auto-detect separator: tab > comma > pipe
+  const firstLine = lines[0];
+  const sep = firstLine.includes('\t') ? '\t' : (firstLine.split(',').length > firstLine.split('|').length ? ',' : '|');
+
+  // Parse headers from first line
+  const headers = (sep === ',' ? parseCSVLine(firstLine) : firstLine.split(sep)).map(h => h.trim().toLowerCase());
+
+  // Helper: find LAST column index matching any keyword (avoids false matches on earlier cols)
+  function findLastIdx(kws) {
+    for (const kw of kws) {
+      // Try exact match first
+      const exact = headers.lastIndexOf(kw);
+      if (exact >= 0) return exact;
+      // Then partial match from end
+      for (let i = headers.length - 1; i >= 0; i--) {
+        if (headers[i].includes(kw)) return i;
+      }
+    }
+    return -1;
+  }
+  function findFirstIdx(kws) {
+    for (const kw of kws) {
+      const i = headers.findIndex(h => h === kw || h.includes(kw));
+      if (i >= 0) return i;
+    }
+    return -1;
+  }
+
+  // Map column indices — using actual Tally sheet structure
+  const nameIdx    = findFirstIdx(['nombre y apellido','contenidista','nombre','name','apellido','full name']);
+  const emailIdx   = findFirstIdx(['email','mail','correo']);
+  // Product: "¿A QUÉ PROYECTO...?" col comes before the boolean breakdown cols
+  const productIdx = findFirstIdx(['proyecto','producto','product','tipo de','servicio','qué creaste','que creaste']);
+  const dateIdx    = findFirstIdx(['submitted at','submitted_at','created at','timestamp','fecha']);
+  const cuitIdx    = findFirstIdx(['cuit']);
+  const cbuIdx     = findFirstIdx(['cbu','alias']);
+  // Invoice file: MUST be the last column named "factura" (not the question col)
+  const invoiceIdx = findLastIdx(['link factura','adjunto','comprobante','archivo','file upload','upload','pdf','factura']);
+
+  // Parse data rows
+  const existing = new Set(invoices.map(i => i.email.toLowerCase() + '_' + i.product));
+  tallyPendingRows = [];
+  lines.slice(1).forEach((line, idx) => {
+    const cols = sep === ',' ? parseCSVLine(line) : line.split(sep).map(c => c.trim());
+    if (cols.length < 2) return;
+    const name  = nameIdx >= 0  ? cols[nameIdx]  : '';
+    const email = emailIdx >= 0 ? (cols[emailIdx] || '').replace(/\s/g,'') : '';
+    if (!name && !email) return;
+    const rawProduct = productIdx >= 0 ? cols[productIdx].toLowerCase() : '';
+    // If the product cell is a boolean (TRUE/FALSE), scan cols 7-10 for text value
+    let product;
+    if (rawProduct === 'true' || rawProduct === 'false' || rawProduct === '') {
+      // Find first col with a meaningful product text
+      const productText = cols.slice(7, 11).find(c => c && c.toUpperCase() !== 'TRUE' && c.toUpperCase() !== 'FALSE' && c.trim() !== '') || '';
+      product = detectProduct(productText.toLowerCase());
+    } else {
+      product = detectProduct(rawProduct);
+    }
+    // Use product price directly
+    const amount = product ? PRICES[product].amount : 0;
+    const cuit = cuitIdx >= 0 ? cols[cuitIdx] || null : null;
+    const cbu  = cbuIdx >= 0  ? cols[cbuIdx]  || null : null;
+    const invoiceFile = invoiceIdx >= 0 ? cols[invoiceIdx] || null : null;
+    const submittedAt = dateIdx >= 0 ? cols[dateIdx] || null : null;
+    const key = email.toLowerCase() + '_' + product;
+    tallyPendingRows.push({ idx, name, email, product, qty: null, unit: amount, cuit, cbu, invoiceFile, submittedAt, alreadyImported: existing.has(key) });
+  });
+
+  const newRows = tallyPendingRows.filter(r => !r.alreadyImported);
+  if (!newRows.length) {
+    document.getElementById('tally-rows-container').innerHTML =
+      '<div style="padding:12px"><div class="no-errors">✅ No hay respuestas nuevas — todo ya fue importado.</div>' +
+      '<details style="margin-top:8px;font-size:11px;color:var(--gray-400)"><summary>🔍 Debug</summary>' +
+      '<pre style="background:#f5f5f5;padding:8px;font-size:10px;white-space:pre-wrap;overflow:auto;max-height:200px">' +
+      'sep="' + sep + '" | headers (' + headers.length + '):\n' + headers.map((h,i)=>i+':"'+h+'"').join(' | ') +
+      '\nnombre=col'+nameIdx+' email=col'+emailIdx+' producto=col'+productIdx+' cuit=col'+cuitIdx+' cbu=col'+cbuIdx+' factura=col'+invoiceIdx+' fecha=col'+dateIdx+
+      '\nTotal filas: ' + tallyPendingRows.length +
+      (tallyPendingRows[0] ? '\nFila 0: '+JSON.stringify(tallyPendingRows[0]) : '') +
+      '\n\nPrimeros 300 chars del raw:\n' + rawText.substring(0,300).replace(/</g,'&lt;') +
+      '</pre></details></div>';
+    return;
+  }
+  tallyPendingRows = newRows;
+  renderTallyRows();
+}
+
+function detectProduct(str) {
+  if (!str) return 'workshop';
+  if (str.includes('live') || str.includes('sesi')) return 'live';
+  if (str.includes('diplom')) return 'diplomatura';
+  if (str.includes('asistente') || str.includes('contenido') || str.includes('assistant')) return 'asistente';
+  if (str.includes('curs') || str.includes('course')) return 'curso';
+  return 'workshop';
+}
+
+function parseAmount(str) {
+  if (!str) return null;
+  const n = parseFloat(str.replace(/[^0-9.,]/g,'').replace(',','.'));
+  return isNaN(n) ? null : n;
+}
+
+function findIdx(headers, keywords) {
+  for (const kw of keywords) {
+    const i = headers.findIndex(h => h.includes(kw));
+    if (i >= 0) return i;
+  }
+  return -1;
+}
+
+function renderTallyRows() {
+  document.getElementById('tally-rows-container').innerHTML = tallyPendingRows.map((r, i) => `
+    <div class="tally-row" id="trow-${i}" onclick="toggleTallyRow(${i})">
+      <div class="tally-check" id="tcheck-${i}"></div>
+      <div class="tally-info">
+        <div class="tally-name">${r.name || '(sin nombre)'}</div>
+        <div class="tally-detail">${r.email || '(sin email)'} · ${PRICES[r.product]?.label || r.product} · Cant: ${r.qty ?? '–'}${r.cuit ? ' · CUIT: '+r.cuit : ''}${r.submittedAt ? ' · 📅 '+formatSubmittedAt(r.submittedAt) : ''}${r.invoiceFile ? ' · 📄 '+(isTallyUrl(r.invoiceFile) ? 'Factura Tally ✓' : r.invoiceFile) : ' · ⚠️ sin factura'}</div>
+      </div>
+      <div class="tally-amount">${fmt(r.unit && r.qty ? r.unit * r.qty : r.unit)}</div>
+    </div>`).join('');
+}
+
+function toggleTallyRow(i) {
+  if (selectedTallyRows.has(i)) selectedTallyRows.delete(i);
+  else selectedTallyRows.add(i);
+  document.getElementById(`trow-${i}`).classList.toggle('selected', selectedTallyRows.has(i));
+  document.getElementById(`tcheck-${i}`).textContent = selectedTallyRows.has(i) ? '✓' : ' ';
+}
+
+function importSelected() {
+  if (!selectedTallyRows.size) { showToast('Seleccioná al menos una fila', 'error'); return; }
+  selectedTallyRows.forEach(i => {
+    const r = tallyPendingRows[i];
+    if (!r) return;
+    // Si invoiceFile es URL de Tally, usarla como driveUrl directamente
+    const isUrl = isTallyUrl(r.invoiceFile);
+    invoices.push({ id: nextId++, name: r.name, email: r.email, product: r.product, unit: r.unit, qty: r.qty, mailStatus: 'pending', driveUrl: isUrl ? r.invoiceFile : null, invoiceFile: isUrl ? null : (r.invoiceFile || null), cuit: r.cuit || null, cbu: r.cbu || null, submittedAt: r.submittedAt || null, fromTally: true });
+  });
+  const count = selectedTallyRows.size;
+  closeTallyModal();
+  renderAll();
+  // If currently in finance view, refresh it too
+  if (document.getElementById('finance-view').style.display !== 'none') renderFinanceView();
+  showToast(`✅ ${count} factura${count > 1 ? 's' : ''} importada${count > 1 ? 's' : ''} desde Tally`, 'success');
+}
+
+function closeTallyModal() {
+  document.getElementById('tally-modal').classList.remove('open');
+  selectedTallyRows.clear();
+}
+
+// ─── INTERACTIONS ─────────────────────────────────────────────────────────
+function switchView(v) {
+  document.getElementById('ops-view').style.display = v === 'ops' ? 'block' : 'none';
+  document.getElementById('finance-view').style.display = v === 'finance' ? 'block' : 'none';
+  document.querySelectorAll('.view-toggle button').forEach((b,i) => b.classList.toggle('active', (i===0&&v==='ops')||(i===1&&v==='finance')));
+  if (v === 'finance') renderFinanceView();
+}
+
+function toggleSection(bodyId, iconId) {
+  const body = document.getElementById(bodyId);
+  const icon = document.getElementById(iconId);
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  icon.textContent = open ? '▶' : '▼';
+}
+
+function toggleForm() {
+  const body = document.getElementById('form-body');
+  body.classList.toggle('open');
+  document.getElementById('form-icon').textContent = body.classList.contains('open') ? '▲' : '▼';
+}
+
+function filterTable(q) { searchQuery = q; renderTable(); }
+function filterByProduct(p) { productFilter = p; renderTable(); }
+
+function updatePeriod() {
+  document.getElementById('stat-period').textContent = getPeriodLabel();
+  document.getElementById('finance-period').textContent = getPeriodLabel();
+  renderAll();
+}
+
+function editPrice(k) {
+  const v = prompt(`Nuevo monto para "${PRICES[k].label}":`, PRICES[k].amount);
+  if (v === null) return;
+  const n = parseFloat(v.replace(/[^0-9.,]/g,'').replace(',','.'));
+  if (isNaN(n) || n <= 0) { alert('Ingresá un monto válido.'); return; }
+  PRICES[k].amount = n;
+  renderAll();
+}
+
+function onProductChange() {
+  const p = document.getElementById('f-product').value;
+  if (p && PRICES[p]) document.getElementById('f-unit').value = PRICES[p].amount;
+  previewEntry();
+}
+
+function previewEntry() {
+  const name = document.getElementById('f-name').value;
+  const product = document.getElementById('f-product').value;
+  const unit = parseFloat(document.getElementById('f-unit').value) || 0;
+  const qty  = parseFloat(document.getElementById('f-qty').value) || null;
+  const prev = document.getElementById('form-preview');
+  if (!name || !product) { prev.classList.remove('visible'); return; }
+  const t = unit && qty ? unit * qty : unit;
+  const warn = PRICES[product] && unit !== PRICES[product].amount ? ` ⚠️ Monto ≠ tarifa de referencia (${fmt(PRICES[product].amount)})` : '';
+  prev.classList.add('visible');
+  prev.innerHTML = `Vista previa: <strong>${name}</strong> · ${PRICES[product].label} · ${fmt(unit)} × ${qty||'–'} = <strong>${fmt(t)}</strong>${warn}`;
+}
+
+function addEntry() {
+  const name = document.getElementById('f-name').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const product = document.getElementById('f-product').value;
+  const unit = parseFloat(document.getElementById('f-unit').value) || 0;
+  const qty = parseFloat(document.getElementById('f-qty').value) || null;
+  const mailStatus = document.getElementById('f-mail').value === 'si' ? 'sent' : 'pending';
+  if (!name || !email || !product) { alert('Completá nombre, email y producto.'); return; }
+  invoices.push({ id: nextId++, name, email, product, unit, qty, mailStatus, driveUrl: null, invoiceFile: null, cuit: null, cbu: null, submittedAt: null, fromTally: false });
+  clearForm();
+  renderAll();
+}
+
+function clearForm() {
+  ['f-name','f-email','f-unit','f-qty'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-product').value = '';
+  document.getElementById('f-mail').value = 'no';
+  document.getElementById('form-preview').classList.remove('visible');
+}
+
+function deleteEntry(id) {
+  if (!confirm('¿Eliminar esta factura?')) return;
+  invoices = invoices.filter(i => i.id !== id);
+  renderAll();
+}
+
+function openEdit(id) {
+  const inv = invoices.find(i => i.id === id);
+  if (!inv) return;
+  document.getElementById('edit-id').value = id;
+  document.getElementById('edit-name').value = inv.name;
+  document.getElementById('edit-email').value = inv.email;
+  document.getElementById('edit-product').value = inv.product;
+  document.getElementById('edit-unit').value = inv.unit;
+  document.getElementById('edit-qty').value = inv.qty || '';
+  document.getElementById('edit-cuit').value = inv.cuit || '';
+  document.getElementById('edit-cbu').value = inv.cbu || '';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function editProductChange() {
+  const p = document.getElementById('edit-product').value;
+  if (p && PRICES[p]) document.getElementById('edit-unit').value = PRICES[p].amount;
+}
+
+function saveEdit() {
+  const id = parseInt(document.getElementById('edit-id').value);
+  const inv = invoices.find(i => i.id === id);
+  if (!inv) return;
+  inv.name = document.getElementById('edit-name').value.trim();
+  inv.email = document.getElementById('edit-email').value.trim();
+  inv.product = document.getElementById('edit-product').value;
+  inv.unit = parseFloat(document.getElementById('edit-unit').value) || 0;
+  inv.qty = parseFloat(document.getElementById('edit-qty').value) || null;
+  inv.cuit = document.getElementById('edit-cuit').value.trim() || null;
+  inv.cbu = document.getElementById('edit-cbu').value.trim() || null;
+  closeModal('edit-modal');
+  renderAll();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function exportCSV() {
+  const rows = [['Nombre','Email','Producto','Monto unit.','Cantidad','Total','Mail','Drive']];
+  invoices.forEach(inv => rows.push([inv.name, inv.email, PRICES[inv.product].label, inv.unit, inv.qty ?? '', total(inv), inv.mailStatus, inv.driveUrl || '']));
+  const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+  a.download = `liquidacion_${getPeriodLabel().replace(' ','_')}.csv`;
+  a.click();
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const div = document.createElement('div');
+  div.className = `toast ${type}`;
+  div.textContent = msg;
+  container.appendChild(div);
+  setTimeout(() => { div.style.animation = 'fadeOut .3s forwards'; setTimeout(() => div.remove(), 300); }, 3500);
+}
+
+// Close modals on overlay click
+['tally-modal','edit-modal','mail-modal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(id); });
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+renderAll();
+</script>
+</div><!-- /app -->
+</body>
+</html>
