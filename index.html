@@ -1,4 +1,23 @@
 <!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Liquidaciones Facturas",
+  "schemaVersion": 1,
+  "description": "Dashboard de liquidación de facturas para contenidistas y creadores de workshops. Pre-cargado con los datos de Mayo 2026, con validaciones automáticas de montos, duplicados y datos incompletos. Incluye vista Finanzas y exportación CSV.",
+  "mcpTools": [
+    "mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__download_file_content",
+    "mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__create_file",
+    "mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__search_files",
+    "mcp__ff2884e9-cfd1-4631-99f5-38ced2f8df40__create_draft"
+  ],
+  "mcpServerNames": [
+    "Google Drive",
+    "Google Drive",
+    "Google Drive",
+    "Gmail"
+  ]
+}
+</script>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
@@ -278,7 +297,7 @@
     </div>
     <button class="btn btn-tally" onclick="openTallySync()" title="Importar nuevas respuestas del formulario Tally">⬆ Sincronizar Tally</button>
     <button class="btn btn-outline" onclick="exportCSV()">⬇ Exportar CSV</button>
-    <button class="btn btn-primary" onclick="toggleForm()">+ Nueva factura</button>
+    <button class="btn btn-primary" id="btn-nueva" onclick="toggleForm()">+ Nueva factura</button>
   </div>
 </div>
 
@@ -512,7 +531,7 @@
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('mail-modal')">Cerrar</button>
       <button class="btn btn-outline" onclick="copyMailText()" id="copy-mail-btn">📋 Copiar texto</button>
-      <button class="btn btn-primary" onclick="sendMailDraft()" id="send-draft-btn">📨 Crear borrador en Gmail</button>
+      <button class="btn btn-primary" onclick="sendMailDraft()" id="send-draft-btn">📨 Abrir en Gmail</button>
     </div>
   </div>
 </div>
@@ -523,6 +542,7 @@
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 const SHEET_ID = '1gQNCLK0fw8VndKAEvOhCW7w4J-Sou4du6pPfeIchSVc';
+const SHEET_PUBLIC_CSV = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
 const NOTION_FORM = 'https://tally.so/r/5BLpEN';
 const MONTHS_ES = { 'Enero':1,'Febrero':2,'Marzo':3,'Abril':4,'Mayo':5,'Junio':6,'Julio':7,'Agosto':8,'Septiembre':9,'Octubre':10,'Noviembre':11,'Diciembre':12 };
 
@@ -551,13 +571,14 @@ let tallyPendingRows = [];
 let selectedTallyRows = new Set();
 
 // ─── MCP WRAPPER ──────────────────────────────────────────────────────────
+const isCowork = () => !!window.cowork?.callMcpTool;
+
 async function callMcp(tool, args) {
-  // Retry up to 3 times with 500ms delay if window.cowork isn't ready yet
   for (let attempt = 0; attempt < 3; attempt++) {
-    if (window.cowork?.callMcpTool) return callMcp(tool, args);
+    if (isCowork()) return window.cowork.callMcpTool(tool, args);
     await new Promise(r => setTimeout(r, 500));
   }
-  throw new Error('Conexión con Cowork no disponible. Cerrá y volvé a abrir el tablero.');
+  throw new Error('Conexión con Cowork no disponible.');
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────
@@ -582,7 +603,6 @@ function validateInvoice(inv) {
   return errs;
 }
 
-// Ops = entradas manuales de Cami | Tally = respuestas de profesores
 const opsInvoices  = () => invoices.filter(i => !i.fromTally);
 const tallyInvoices = () => invoices.filter(i =>  i.fromTally);
 
@@ -725,9 +745,7 @@ function renderFinanceView() {
     ? `<div class="fin-note">⚠️ <strong>${errs.length} error${errs.length > 1 ? 'es' : ''} detectado${errs.length > 1 ? 's' : ''}:</strong> ${errs.join(' · ')}</div>` : '';
   const chips = { workshop:'chip-workshop', curso:'chip-curso', live:'chip-live', diplomatura:'chip-diplomatura', asistente:'chip-asistente' };
   document.getElementById('fin-body').innerHTML = tally.map(function(inv, i) {
-    const dateCell = inv.submittedAt
-      ? formatSubmittedAt(inv.submittedAt)
-      : '<span style="color:var(--gray-300)">–</span>';
+    const dateCell = inv.submittedAt ? formatSubmittedAt(inv.submittedAt) : '<span style="color:var(--gray-300)">–</span>';
     let invoiceCell;
     if (inv.driveUrl) {
       invoiceCell = '<a href="' + inv.driveUrl + '" target="_blank" title="Ver factura" style="font-size:18px;text-decoration:none">📄</a>';
@@ -793,18 +811,18 @@ function sendMail(id) {
   const inv = invoices.find(i => i.id === id);
   if (!inv) return;
   if (inv.mailStatus === 'sending') return;
-
   const { subject, htmlBody } = buildMailBody(inv);
   _currentMailId = id;
   _currentMailHtml = htmlBody;
   _currentMailSubject = subject;
   _currentMailTo = inv.email;
-
   document.getElementById('mail-to').textContent = inv.email;
   document.getElementById('mail-subject').textContent = subject;
   document.getElementById('mail-body-preview').innerHTML = htmlBody;
-  document.getElementById('send-draft-btn').textContent = '📨 Crear borrador en Gmail';
+  // Label differs: Cowork = borrador automático, GitHub = abrir en Gmail
+  document.getElementById('send-draft-btn').textContent = isCowork() ? '📨 Crear borrador en Gmail' : '↗ Abrir en Gmail';
   document.getElementById('send-draft-btn').disabled = false;
+  document.getElementById('mail-error-box').style.display = 'none';
   document.getElementById('mail-modal').classList.add('open');
 }
 
@@ -813,42 +831,31 @@ async function sendMailDraft() {
   if (!inv) return;
   const btn = document.getElementById('send-draft-btn');
   const errBox = document.getElementById('mail-error-box');
-  btn.disabled = true;
-  btn.textContent = '⏳ Creando borrador…';
   errBox.style.display = 'none';
 
-  // Fallback: si no hay window.cowork (Chrome local), abrir mailto:
-  if (!window.cowork?.callMcpTool) {
+  // ── Sin Cowork: abrir Gmail compose directamente en el navegador ──
+  if (!isCowork()) {
     const tmp = document.createElement('div');
     tmp.innerHTML = _currentMailHtml;
     const plainBody = tmp.innerText;
-    const mailtoLink = `mailto:${encodeURIComponent(_currentMailTo)}?subject=${encodeURIComponent(_currentMailSubject)}&body=${encodeURIComponent(plainBody)}`;
-    window.open(mailtoLink, '_blank');
-    btn.disabled = false;
-    btn.textContent = '📨 Crear borrador en Gmail';
-    showToast('📬 Abriendo Gmail con el mail pre-armado…', 'success');
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(_currentMailTo)}&su=${encodeURIComponent(_currentMailSubject)}&body=${encodeURIComponent(plainBody)}`;
+    window.open(gmailUrl, '_blank');
+    closeModal('mail-modal');
+    showToast('↗ Abriendo Gmail con el mail listo para enviar', 'success');
     return;
   }
 
+  // ── Con Cowork: crear borrador automáticamente ──
+  btn.disabled = true;
+  btn.textContent = '⏳ Creando borrador…';
   try {
-    let mailResult;
-    try {
-      mailResult = await window.cowork.callMcpTool('mcp__ff2884e9-cfd1-4631-99f5-38ced2f8df40__create_draft', {
-        to: [inv.email],
-        subject: _currentMailSubject,
-        htmlBody: _currentMailHtml
-      });
-    } catch(callErr) {
-      throw new Error('callMcpTool falló: ' + (callErr?.message || String(callErr)));
-    }
-
-    // Mostrar respuesta cruda para debug si hay error
+    const mailResult = await window.cowork.callMcpTool('mcp__ff2884e9-cfd1-4631-99f5-38ced2f8df40__create_draft', {
+      to: [inv.email],
+      subject: _currentMailSubject,
+      htmlBody: _currentMailHtml
+    });
     const rawText = mailResult?.content?.[0]?.text || JSON.stringify(mailResult);
-    const isErr = mailResult?.isError === true ||
-      (rawText && rawText.toLowerCase().includes('"iserror":true'));
-
-    if (isErr) throw new Error('MCP respondió error: ' + rawText.slice(0, 200));
-
+    if (mailResult?.isError === true) throw new Error('MCP error: ' + rawText.slice(0,200));
     inv.mailStatus = 'sent';
     renderTable();
     closeModal('mail-modal');
@@ -859,14 +866,11 @@ async function sendMailDraft() {
     btn.disabled = false;
     btn.textContent = '📨 Reintentar';
     errBox.style.display = 'block';
-    errBox.innerHTML = '❌ <strong>Error:</strong> ' + (e.message || String(e)) + '<br><small>Usá "Copiar texto" para mandarlo manualmente desde tu Gmail.</small>';
+    errBox.innerHTML = '❌ <strong>Error:</strong> ' + (e.message || String(e)) + '<br><small>Usá "Copiar texto" o cerrá y reabrí el tablero.</small>';
   }
 }
 
 function copyMailText() {
-  const inv = invoices.find(i => i.id === _currentMailId);
-  const name = inv ? inv.name : '';
-  // Strip HTML tags para el portapapeles
   const tmp = document.createElement('div');
   tmp.innerHTML = _currentMailHtml;
   const plain = `Para: ${_currentMailTo}\nAsunto: ${_currentMailSubject}\n\n${tmp.innerText}`;
@@ -874,15 +878,12 @@ function copyMailText() {
     showToast('📋 Mail copiado al portapapeles', 'success');
     document.getElementById('copy-mail-btn').textContent = '✅ Copiado!';
     setTimeout(() => { document.getElementById('copy-mail-btn').textContent = '📋 Copiar texto'; }, 2000);
-  }).catch(() => {
-    showToast('No se pudo copiar automáticamente', 'error');
-  });
+  }).catch(() => showToast('No se pudo copiar automáticamente', 'error'));
 }
 
 // ─── HELPERS DE FECHA ─────────────────────────────────────────────────────
 function formatSubmittedAt(raw) {
   if (!raw) return '';
-  // Tally envía "2026-05-08 14:32:00" o ISO "2026-05-08T14:32:00.000Z"
   try {
     const d = new Date(raw.replace(' ', 'T'));
     if (isNaN(d)) return raw;
@@ -896,20 +897,11 @@ function isTallyUrl(str) {
 }
 
 // ─── VIEW INVOICE ─────────────────────────────────────────────────────────
-// Maneja 3 casos:
-//   1. Ya tenemos driveUrl → abrir directo
-//   2. invoiceFile es una URL de Tally storage → abrir directo
-//   3. invoiceFile es un nombre de archivo → buscar en Drive
 async function viewInvoice(id) {
   const inv = invoices.find(i => i.id === id);
   if (!inv) return;
-
-  // Caso 1: URL ya resuelta
   if (inv.driveUrl) { window.open(inv.driveUrl, '_blank'); return; }
-
   if (!inv.invoiceFile) { showToast('Sin factura cargada para este contenidista', 'error'); return; }
-
-  // Caso 2: La factura viene de Tally (URL directa)
   if (isTallyUrl(inv.invoiceFile)) {
     inv.driveUrl = inv.invoiceFile;
     renderTable();
@@ -917,18 +909,15 @@ async function viewInvoice(id) {
     showToast(`📄 Abriendo factura de ${inv.name}`, 'success');
     return;
   }
-
-  // Caso 3: Buscar por nombre en Drive
+  if (!isCowork()) { showToast('La búsqueda en Drive solo está disponible en Cowork', 'error'); return; }
   showToast(`🔍 Buscando "${inv.invoiceFile}" en Drive…`, 'info');
   try {
-    // Helper: extract files array from MCP-wrapped response
     function parseDriveFiles(r) {
       if (r?.isError) return [];
       try { return JSON.parse(r?.content?.[0]?.text || '{}')?.files || []; } catch(e2) { return r?.files || []; }
     }
     const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__search_files', {
-      query: `title = '${inv.invoiceFile.replace(/'/g, "\\'")}'`,
-      pageSize: 5
+      query: `title = '${inv.invoiceFile.replace(/'/g, "\\'")}'`, pageSize: 5
     });
     const files = parseDriveFiles(result);
     if (files.length > 0) {
@@ -938,11 +927,9 @@ async function viewInvoice(id) {
       window.open(inv.driveUrl, '_blank');
       showToast(`📄 Factura de ${inv.name} encontrada en Drive`, 'success');
     } else {
-      // Fallback: buscar por apellido del contenidista
       const apellido = inv.name.trim().split(' ').pop().toLowerCase();
       const fb = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__search_files', {
-        query: `title contains '${apellido}' and mimeType = 'application/pdf'`,
-        pageSize: 5
+        query: `title contains '${apellido}' and mimeType = 'application/pdf'`, pageSize: 5
       });
       const fbFiles = parseDriveFiles(fb);
       if (fbFiles.length > 0) {
@@ -966,7 +953,6 @@ function buildInvoicePDF(inv) {
   const payDate = getPaymentDate();
   const t = total(inv);
   const today = new Date().toLocaleDateString('es-AR');
-  // Sanitize for PDF string syntax (ASCII only, escape parens/backslash)
   const san = s => (s||'')
     .replace(/[áàâä]/gi, c => c===c.toUpperCase()?'A':'a')
     .replace(/[éèêë]/gi, c => c===c.toUpperCase()?'E':'e')
@@ -977,61 +963,45 @@ function buildInvoicePDF(inv) {
     .replace(/[()\\]/g, c => '\\' + c)
     .replace(/[^\x20-\x7E]/g, '?');
   const fmtP = n => n != null ? '$' + Number(n).toLocaleString('es-AR',{minimumFractionDigits:0}) : '';
-  // Helper to produce a positioned text operator
   const txt = (x, y, font, size, str) => `BT /F${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${san(str)}) Tj ET`;
-
   const cs = [
-    // Black header band
     '0 0 0 rg', '0 700 612 92 re f',
-    // Header text (white)
     '1 1 1 rg',
     txt(40, 752, 2, 22, 'CODERHOUSE'),
     txt(40, 728, 1, 10, 'Comprobante de Liquidacion'),
     txt(300, 728, 1, 10, period),
-    // Section title
     '0 0 0 rg',
     txt(40, 668, 2, 12, 'Detalle de pago'),
-    // Dividers
     '0.80 0.80 0.80 RG 0.5 w 40 658 m 572 658 l S',
-    // Row 1 labels (gray)
     '0.50 0.50 0.50 rg',
     txt(40,  641, 1, 7.5, 'NOMBRE Y APELLIDO'),
     txt(310, 641, 1, 7.5, 'PRODUCTO'),
-    // Row 1 values (black)
     '0 0 0 rg',
     txt(40,  624, 2, 11, inv.name),
     txt(310, 624, 1, 11, PRICES[inv.product].label),
     '0.93 0.93 0.93 RG 0.4 w 40 613 m 572 613 l S',
-    // Row 2 labels
     '0.50 0.50 0.50 rg',
     txt(40,  600, 1, 7.5, 'EMAIL'),
     txt(310, 600, 1, 7.5, 'FECHA DE PAGO'),
-    // Row 2 values
     '0 0 0 rg',
     txt(40,  584, 1, 10, inv.email),
     txt(310, 584, 2, 11, payDate),
     '0.93 0.93 0.93 RG 0.4 w 40 573 m 572 573 l S',
-    // Row 3 labels
     '0.50 0.50 0.50 rg',
     txt(40,  560, 1, 7.5, 'MONTO POR UNIDAD'),
     inv.qty != null ? txt(310, 560, 1, 7.5, 'CANTIDAD') : '',
-    // Row 3 values
     '0 0 0 rg',
     txt(40,  544, 1, 11, fmtP(inv.unit)),
     inv.qty != null ? txt(310, 544, 2, 11, String(inv.qty)) : '',
-    // Total box (dark)
     '0.05 0.05 0.05 rg', '40 450 532 72 re f',
     '1 1 1 rg',
     txt(55, 510, 1, 8,  'TOTAL A COBRAR'),
     txt(55, 466, 2, 28, fmtP(t)),
-    // Footer rule + text
     '0.80 0.80 0.80 RG 0.4 w 40 52 m 572 52 l S',
     '0.60 0.60 0.60 rg',
     txt(40,  38, 1, 8, 'Emitido por Coderhouse Ops - ' + today),
     txt(410, 38, 1, 8, 'Pago acreditado: ' + payDate),
   ].filter(Boolean).join('\n');
-
-  // Build objects
   const o1 = '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n';
   const o2 = '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n';
   const o3 = '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>\nendobj\n';
@@ -1039,7 +1009,6 @@ function buildInvoicePDF(inv) {
   const o5 = '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n';
   const o6 = '6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n';
   const allObjs = [o1, o2, o3, o4, o5, o6];
-
   let hdr = '%PDF-1.4\n', pos = hdr.length;
   const xPos = [];
   allObjs.forEach(o => { xPos.push(pos); pos += o.length; });
@@ -1054,7 +1023,6 @@ async function saveToDrive(id) {
   const inv = invoices.find(i => i.id === id);
   if (!inv) return;
   const period = getPeriodLabel();
-
   showToast('💾 Generando PDF y subiendo a Drive…', 'info');
   try {
     const pdfStr = buildInvoicePDF(inv);
@@ -1066,12 +1034,11 @@ async function saveToDrive(id) {
       disableConversionToGoogleType: true
     });
     if (result?.isError) throw new Error(result.content?.[0]?.text || 'Error al subir a Drive');
-    // Parse MCP response: actual output is in content[0].text as JSON
     let url = null;
     try {
       const parsed = JSON.parse(result?.content?.[0]?.text || '{}');
       url = parsed.alternateLink || parsed.webViewLink || (parsed.id ? `https://drive.google.com/file/d/${parsed.id}/view` : null);
-    } catch(e2) { /* use fallback */ }
+    } catch(e2) {}
     inv.driveUrl = url || 'https://drive.google.com';
     renderTable();
     showToast(`📄 PDF guardado en Drive: ${inv.name}`, 'success');
@@ -1086,34 +1053,33 @@ async function openTallySync() {
   document.getElementById('tally-rows-container').innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400)">⏳ Cargando datos de Tally…</div>';
   document.getElementById('tally-modal').classList.add('open');
   selectedTallyRows.clear();
+
   try {
-    // callMcpTool returns MCP format: {content:[{type:"text",text:"...json..."}], isError:bool}
-    const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__download_file_content', {
-      fileId: SHEET_ID,
-      exportMimeType: 'text/csv'
-    });
+    let csvText;
 
-    // Check for MCP-level error
-    if (result?.isError) throw new Error(result.content?.[0]?.text || 'MCP error');
-
-    // Extract the actual tool output text
-    const toolText = (result?.content?.[0]?.text) || (typeof result === 'string' ? result : JSON.stringify(result));
-
-    // Parse tool output JSON to get the base64 content
-    let b64 = null;
-    try {
-      const parsed = JSON.parse(toolText);
-      b64 = parsed?.content || parsed?.fileContent || null;
-    } catch(e2) {
-      b64 = toolText; // maybe it's raw base64 directly
+    if (isCowork()) {
+      // ── Cowork: leer via MCP (autenticado) ──
+      const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__download_file_content', {
+        fileId: SHEET_ID, exportMimeType: 'text/csv'
+      });
+      if (result?.isError) throw new Error(result.content?.[0]?.text || 'MCP error');
+      const toolText = (result?.content?.[0]?.text) || (typeof result === 'string' ? result : JSON.stringify(result));
+      let b64 = null;
+      try { const parsed = JSON.parse(toolText); b64 = parsed?.content || parsed?.fileContent || null; }
+      catch(e2) { b64 = toolText; }
+      if (!b64) throw new Error('No se pudo extraer contenido del Sheet');
+      csvText = decodeBase64UTF8(b64.replace(/\s/g,''));
+    } else {
+      // ── GitHub Pages / Chrome: leer via URL pública del Sheet ──
+      const res = await fetch(SHEET_PUBLIC_CSV);
+      if (!res.ok) throw new Error(`HTTP ${res.status} — ¿El Sheet es público? (Compartir → "Cualquiera con el link")`);
+      csvText = await res.text();
     }
-    if (!b64) throw new Error('No se pudo extraer contenido del Sheet');
 
-    // Decode base64 → CSV without using atob (custom decoder, avoids DOMException)
-    const csvText = decodeBase64UTF8(b64.replace(/\s/g,''));
     parseTallyContent(csvText);
   } catch (e) {
-    document.getElementById('tally-rows-container').innerHTML = '<div style="color:var(--red);padding:12px">❌ Error: ' + (e.message || e) + '</div>';
+    document.getElementById('tally-rows-container').innerHTML =
+      '<div style="color:var(--red);padding:12px">❌ Error: ' + (e.message || e) + '</div>';
   }
 }
 
@@ -1134,7 +1100,6 @@ function decodeBase64UTF8(b64) {
   return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
 }
 
-// Simple CSV parser that handles quoted fields
 function parseCSVLine(line) {
   const result = [];
   let cur = '', inQuote = false;
@@ -1152,7 +1117,6 @@ function parseCSVLine(line) {
 }
 
 function parseTallyContent(rawText) {
-  // Normalize line endings and split
   const lines = rawText.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l => l.trim().length > 0);
   if (lines.length < 2) {
     document.getElementById('tally-rows-container').innerHTML =
@@ -1162,21 +1126,13 @@ function parseTallyContent(rawText) {
       rawText.substring(0,500).replace(/</g,'&lt;') + '</pre></details></div>';
     return;
   }
-
-  // Auto-detect separator: tab > comma > pipe
   const firstLine = lines[0];
   const sep = firstLine.includes('\t') ? '\t' : (firstLine.split(',').length > firstLine.split('|').length ? ',' : '|');
-
-  // Parse headers from first line
   const headers = (sep === ',' ? parseCSVLine(firstLine) : firstLine.split(sep)).map(h => h.trim().toLowerCase());
-
-  // Helper: find LAST column index matching any keyword (avoids false matches on earlier cols)
   function findLastIdx(kws) {
     for (const kw of kws) {
-      // Try exact match first
       const exact = headers.lastIndexOf(kw);
       if (exact >= 0) return exact;
-      // Then partial match from end
       for (let i = headers.length - 1; i >= 0; i--) {
         if (headers[i].includes(kw)) return i;
       }
@@ -1190,19 +1146,13 @@ function parseTallyContent(rawText) {
     }
     return -1;
   }
-
-  // Map column indices — using actual Tally sheet structure
   const nameIdx    = findFirstIdx(['nombre y apellido','contenidista','nombre','name','apellido','full name']);
   const emailIdx   = findFirstIdx(['email','mail','correo']);
-  // Product: "¿A QUÉ PROYECTO...?" col comes before the boolean breakdown cols
   const productIdx = findFirstIdx(['proyecto','producto','product','tipo de','servicio','qué creaste','que creaste']);
   const dateIdx    = findFirstIdx(['submitted at','submitted_at','created at','timestamp','fecha']);
   const cuitIdx    = findFirstIdx(['cuit']);
   const cbuIdx     = findFirstIdx(['cbu','alias']);
-  // Invoice file: MUST be the last column named "factura" (not the question col)
   const invoiceIdx = findLastIdx(['link factura','adjunto','comprobante','archivo','file upload','upload','pdf','factura']);
-
-  // Parse data rows
   const existing = new Set(invoices.map(i => i.email.toLowerCase() + '_' + i.product));
   tallyPendingRows = [];
   lines.slice(1).forEach((line, idx) => {
@@ -1212,16 +1162,13 @@ function parseTallyContent(rawText) {
     const email = emailIdx >= 0 ? (cols[emailIdx] || '').replace(/\s/g,'') : '';
     if (!name && !email) return;
     const rawProduct = productIdx >= 0 ? cols[productIdx].toLowerCase() : '';
-    // If the product cell is a boolean (TRUE/FALSE), scan cols 7-10 for text value
     let product;
     if (rawProduct === 'true' || rawProduct === 'false' || rawProduct === '') {
-      // Find first col with a meaningful product text
       const productText = cols.slice(7, 11).find(c => c && c.toUpperCase() !== 'TRUE' && c.toUpperCase() !== 'FALSE' && c.trim() !== '') || '';
       product = detectProduct(productText.toLowerCase());
     } else {
       product = detectProduct(rawProduct);
     }
-    // Use product price directly
     const amount = product ? PRICES[product].amount : 0;
     const cuit = cuitIdx >= 0 ? cols[cuitIdx] || null : null;
     const cbu  = cbuIdx >= 0  ? cols[cbuIdx]  || null : null;
@@ -1230,7 +1177,6 @@ function parseTallyContent(rawText) {
     const key = email.toLowerCase() + '_' + product;
     tallyPendingRows.push({ idx, name, email, product, qty: null, unit: amount, cuit, cbu, invoiceFile, submittedAt, alreadyImported: existing.has(key) });
   });
-
   const newRows = tallyPendingRows.filter(r => !r.alreadyImported);
   if (!newRows.length) {
     document.getElementById('tally-rows-container').innerHTML =
@@ -1264,14 +1210,6 @@ function parseAmount(str) {
   return isNaN(n) ? null : n;
 }
 
-function findIdx(headers, keywords) {
-  for (const kw of keywords) {
-    const i = headers.findIndex(h => h.includes(kw));
-    if (i >= 0) return i;
-  }
-  return -1;
-}
-
 function renderTallyRows() {
   document.getElementById('tally-rows-container').innerHTML = tallyPendingRows.map((r, i) => `
     <div class="tally-row" id="trow-${i}" onclick="toggleTallyRow(${i})">
@@ -1296,14 +1234,12 @@ function importSelected() {
   selectedTallyRows.forEach(i => {
     const r = tallyPendingRows[i];
     if (!r) return;
-    // Si invoiceFile es URL de Tally, usarla como driveUrl directamente
     const isUrl = isTallyUrl(r.invoiceFile);
     invoices.push({ id: nextId++, name: r.name, email: r.email, product: r.product, unit: r.unit, qty: r.qty, mailStatus: 'pending', driveUrl: isUrl ? r.invoiceFile : null, invoiceFile: isUrl ? null : (r.invoiceFile || null), cuit: r.cuit || null, cbu: r.cbu || null, submittedAt: r.submittedAt || null, fromTally: true });
   });
   const count = selectedTallyRows.size;
   closeTallyModal();
   renderAll();
-  // If currently in finance view, refresh it too
   if (document.getElementById('finance-view').style.display !== 'none') renderFinanceView();
   showToast(`✅ ${count} factura${count > 1 ? 's' : ''} importada${count > 1 ? 's' : ''} desde Tally`, 'success');
 }
