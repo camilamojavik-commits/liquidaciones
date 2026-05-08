@@ -909,7 +909,7 @@ async function viewInvoice(id) {
     showToast(`📄 Abriendo factura de ${inv.name}`, 'success');
     return;
   }
-  if (!isCowork()) { showToast('La búsqueda en Drive solo está disponible en Cowork', 'error'); return; }
+  if (!isCowork()) { showToast('📁 Archivo: "' + inv.invoiceFile + '" — guardado en Drive. Abrí desde Cowork para verlo.', 'error'); return; }
   showToast(`🔍 Buscando "${inv.invoiceFile}" en Drive…`, 'info');
   try {
     function parseDriveFiles(r) {
@@ -1177,6 +1177,17 @@ function parseTallyContent(rawText) {
     const key = email.toLowerCase() + '_' + product;
     tallyPendingRows.push({ idx, name, email, product, qty: null, unit: amount, cuit, cbu, invoiceFile, submittedAt, alreadyImported: existing.has(key) });
   });
+  // ── Filtrar por período seleccionado ──
+  const period = getPeriodLabel();
+  const pParts = period.split(' ');
+  const pMonth = MONTHS_ES[pParts[0]];
+  const pYear  = parseInt(pParts[1]);
+  tallyPendingRows = tallyPendingRows.filter(r => {
+    if (!r.submittedAt) return true; // sin fecha: incluir siempre
+    const d = new Date(r.submittedAt);
+    return (d.getMonth() + 1) === pMonth && d.getFullYear() === pYear;
+  });
+
   const newRows = tallyPendingRows.filter(r => !r.alreadyImported);
   if (!newRows.length) {
     document.getElementById('tally-rows-container').innerHTML =
