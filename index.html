@@ -3,7 +3,7 @@
 {
   "name": "Liquidaciones Facturas",
   "schemaVersion": 1,
-  "description": "Dashboard de liquidación de facturas para contenidistas y creadores de workshops. Pre-cargado con los datos de Mayo 2026, con validaciones automáticas de montos, duplicados y datos incompletos. Incluye vista Finanzas y exportación CSV.",
+  "description": "Dashboard de liquidaciÃ³n de facturas para contenidistas y creadores de workshops. Pre-cargado con los datos de Mayo 2026, con validaciones automÃ¡ticas de montos, duplicados y datos incompletos. Incluye vista Finanzas y exportaciÃ³n CSV.",
   "mcpTools": [
     "mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__download_file_content",
     "mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__create_file",
@@ -23,7 +23,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <script>
-  // PASSWORD PROTECTION — SHA-256 hash of "finops2026"
+  // PASSWORD PROTECTION â SHA-256 hash of "finops2026"
   const HASH = 'ee793b5488d27e38177234ffc4fe6822217214295c97cb8ab7ff7c943297d527';
   async function sha256(msg) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
@@ -70,7 +70,7 @@
   .pwd-error {color:#ff5555;font-size:12px;margin-top:10px;display:none;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;}
   #app {display:none;}
   </style>
-  <title>Liquidación de Facturas — Contenidistas & Workshops</title>
+  <title>LiquidaciÃ³n de Facturas â Contenidistas & Workshops</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
   <style>
@@ -265,11 +265,11 @@
 <div id="pwd-screen">
   <div class="pwd-box">
     <div class="pwd-logo">CH</div>
-    <div class="pwd-title">Liquidación de Facturas</div>
-    <div class="pwd-sub">Ingresá la contraseña para continuar</div>
-    <input id="pwd-input" class="pwd-input" type="password" placeholder="Contraseña" autocomplete="off"/>
+    <div class="pwd-title">LiquidaciÃ³n de Facturas</div>
+    <div class="pwd-sub">IngresÃ¡ la contraseÃ±a para continuar</div>
+    <input id="pwd-input" class="pwd-input" type="password" placeholder="ContraseÃ±a" autocomplete="off"/>
     <button class="pwd-btn" onclick="checkPassword()">Entrar</button>
-    <div id="pwd-error" class="pwd-error">Contraseña incorrecta, intentá de nuevo.</div>
+    <div id="pwd-error" class="pwd-error">ContraseÃ±a incorrecta, intentÃ¡ de nuevo.</div>
   </div>
 </div>
 
@@ -278,9 +278,9 @@
 <div class="header">
   <div class="header-left">
     <div class="logo">CH</div>
-    <h1>Liquidación de Facturas</h1>
+    <h1>LiquidaciÃ³n de Facturas</h1>
     <div class="period-pill">
-      Período:
+      PerÃ­odo:
       <select id="period-select" onchange="updatePeriod()">
         <option value="Mayo 2026" selected>Mayo 2026</option>
         <option value="Junio 2026">Junio 2026</option>
@@ -295,8 +295,8 @@
       <button class="active" onclick="switchView('ops')">Ops</button>
       <button onclick="switchView('finance')">Finanzas</button>
     </div>
-    <button class="btn btn-tally" onclick="openTallySync()" title="Importar nuevas respuestas del formulario Tally">⬆ Sincronizar Tally</button>
-    <button class="btn btn-outline" onclick="exportCSV()">⬇ Exportar CSV</button>
+    <button class="btn btn-tally" onclick="openTallySync()" title="Importar nuevas respuestas del formulario Tally">â¬ Sincronizar Tally</button>
+    <button class="btn btn-outline" onclick="exportCSV()">â¬ Exportar CSV</button>
     <button class="btn btn-primary" id="btn-nueva" onclick="toggleForm()">+ Nueva factura</button>
   </div>
 </div>
@@ -318,7 +318,7 @@
     <div class="stat-card">
       <div class="stat-label">Errores detectados</div>
       <div class="stat-value red" id="stat-errors">0</div>
-      <div class="stat-sub" id="stat-errors-sub">Cargando…</div>
+      <div class="stat-sub" id="stat-errors-sub">Cargandoâ¦</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Mails enviados</div>
@@ -334,7 +334,7 @@
       <div class="stat-sub" id="stat-workshop-sub">0 entregas</div>
     </div>
     <div class="stat-card" style="border-left:3px solid #A16207">
-      <div class="stat-label">Creación de Cursos</div>
+      <div class="stat-label">CreaciÃ³n de Cursos</div>
       <div class="stat-value" id="stat-curso" style="color:#A16207;font-size:17px">$0</div>
       <div class="stat-sub" id="stat-curso-sub">0 entregas</div>
     </div>
@@ -360,8 +360,8 @@
     <!-- ALERTS -->
     <div class="panel">
       <div class="panel-head clickable" onclick="toggleSection('alerts-body','alerts-icon')">
-        <h2>🔔 Alertas y validaciones <span id="alert-badge" class="badge badge-green">OK</span></h2>
-        <span id="alerts-icon" style="font-size:11px;color:var(--gray-400)">▼</span>
+        <h2>ð Alertas y validaciones <span id="alert-badge" class="badge badge-green">OK</span></h2>
+        <span id="alerts-icon" style="font-size:11px;color:var(--gray-400)">â¼</span>
       </div>
       <div class="alerts-body" id="alerts-body"></div>
     </div>
@@ -369,8 +369,8 @@
     <!-- PRICES -->
     <div class="panel">
       <div class="panel-head">
-        <h2>💲 Tarifas de referencia</h2>
-        <span style="font-size:11px;color:var(--gray-400)">Clickeá "Editar" para actualizar montos</span>
+        <h2>ð² Tarifas de referencia</h2>
+        <span style="font-size:11px;color:var(--gray-400)">ClickeÃ¡ "Editar" para actualizar montos</span>
       </div>
       <div class="prices-grid" id="prices-grid"></div>
     </div>
@@ -378,8 +378,8 @@
     <!-- TABLE -->
     <div class="panel">
       <div class="table-toolbar">
-        <h2>📋 Facturas del período</h2>
-        <input type="text" class="search-input" placeholder="🔍 Buscar…" oninput="filterTable(this.value)"/>
+        <h2>ð Facturas del perÃ­odo</h2>
+        <input type="text" class="search-input" placeholder="ð Buscarâ¦" oninput="filterTable(this.value)"/>
         <select class="filter-select" onchange="filterByProduct(this.value)">
           <option value="">Todos los productos</option>
           <option value="workshop">Workshop</option>
@@ -398,7 +398,7 @@
               <th style="text-align:right">Unit.</th>
               <th style="text-align:right">Cant.</th>
               <th style="text-align:right">Total</th>
-              <th>Fecha envío</th>
+              <th>Fecha envÃ­o</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -415,19 +415,19 @@
     <!-- ADD FORM -->
     <div class="panel" id="add-form-panel">
       <div class="panel-head clickable" onclick="toggleForm()">
-        <h2>➕ Agregar nueva factura</h2>
-        <span id="form-icon" style="font-size:11px;color:var(--gray-400)">▼</span>
+        <h2>â Agregar nueva factura</h2>
+        <span id="form-icon" style="font-size:11px;color:var(--gray-400)">â¼</span>
       </div>
       <div class="form-body" id="form-body">
         <div class="form-grid">
-          <div class="form-field"><label>Nombre y apellido *</label><input type="text" id="f-name" placeholder="Ej: Juan García" oninput="previewEntry()"/></div>
+          <div class="form-field"><label>Nombre y apellido *</label><input type="text" id="f-name" placeholder="Ej: Juan GarcÃ­a" oninput="previewEntry()"/></div>
           <div class="form-field"><label>Email *</label><input type="email" id="f-email" placeholder="juan@email.com" oninput="previewEntry()"/></div>
           <div class="form-field">
             <label>Producto *</label>
             <select id="f-product" onchange="onProductChange()">
-              <option value="">Seleccionar…</option>
-              <option value="workshop">Creación de Workshop</option>
-              <option value="curso">Creación de Curso</option>
+              <option value="">Seleccionarâ¦</option>
+              <option value="workshop">CreaciÃ³n de Workshop</option>
+              <option value="curso">CreaciÃ³n de Curso</option>
               <option value="live">Live Sessions</option>
               <option value="diplomatura">Diplomatura</option>
               <option value="asistente">Asistente de Contenido</option>
@@ -437,7 +437,7 @@
           <div class="form-field"><label>Cantidad</label><input type="number" id="f-qty" placeholder="Ej: 2" min="1" oninput="previewEntry()"/></div>
           <div class="form-field">
             <label>Mail enviado</label>
-            <select id="f-mail"><option value="no">No</option><option value="si">Sí</option></select>
+            <select id="f-mail"><option value="no">No</option><option value="si">SÃ­</option></select>
           </div>
         </div>
         <div class="form-preview" id="form-preview"></div>
@@ -455,11 +455,11 @@
 <div id="finance-view">
   <div class="finance-header">
     <div>
-      <h1>Liquidación — Contenidistas & Workshops</h1>
-      <span style="font-size:12px;opacity:.6">Para Finanzas · <span id="finance-date"></span></span>
+      <h1>LiquidaciÃ³n â Contenidistas & Workshops</h1>
+      <span style="font-size:12px;opacity:.6">Para Finanzas Â· <span id="finance-date"></span></span>
     </div>
     <div style="text-align:right">
-      <div style="font-size:11px;opacity:.6">PERÍODO</div>
+      <div style="font-size:11px;opacity:.6">PERÃODO</div>
       <div style="font-size:17px;font-weight:800" id="finance-period">Mayo 2026</div>
     </div>
   </div>
@@ -470,7 +470,7 @@
     <div class="fin-table-wrap" style="padding:0">
       <div class="fin-table">
         <table>
-          <thead><tr><th>#</th><th>Nombre y apellido</th><th>CUIT</th><th>CBU / Alias</th><th>Producto</th><th style="text-align:right">Cant.</th><th style="text-align:right">Total</th><th>Email</th><th>Fecha envío</th><th style="text-align:center">Factura</th></tr></thead>
+          <thead><tr><th>#</th><th>Nombre y apellido</th><th>CUIT</th><th>CBU / Alias</th><th>Producto</th><th style="text-align:right">Cant.</th><th style="text-align:right">Total</th><th>Email</th><th>Fecha envÃ­o</th><th style="text-align:center">Factura</th></tr></thead>
           <tbody id="fin-body"></tbody>
           <tfoot id="fin-foot"></tfoot>
         </table>
@@ -482,8 +482,8 @@
 <!-- TALLY SYNC MODAL -->
 <div class="modal-overlay" id="tally-modal">
   <div class="modal">
-    <h3>⬆ Sincronizar desde Tally</h3>
-    <div class="modal-sub">Nuevas respuestas del formulario de facturas detectadas. Seleccioná las que querés importar al tablero.</div>
+    <h3>â¬ Sincronizar desde Tally</h3>
+    <div class="modal-sub">Nuevas respuestas del formulario de facturas detectadas. SeleccionÃ¡ las que querÃ©s importar al tablero.</div>
     <div id="tally-rows-container"></div>
     <div style="font-size:12px;color:var(--gray-400);margin-top:4px" id="tally-empty" style="display:none"></div>
     <div class="modal-actions">
@@ -496,15 +496,15 @@
 <!-- EDIT MODAL -->
 <div class="modal-overlay" id="edit-modal">
   <div class="modal edit-modal">
-    <h3>✏️ Editar factura</h3>
+    <h3>âï¸ Editar factura</h3>
     <input type="hidden" id="edit-id"/>
     <div class="modal-field"><label>Nombre y apellido</label><input type="text" id="edit-name"/></div>
     <div class="modal-field"><label>Email</label><input type="email" id="edit-email"/></div>
     <div class="modal-field">
       <label>Producto</label>
       <select id="edit-product" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;outline:none" onchange="editProductChange()">
-        <option value="workshop">Creación de Workshop</option>
-        <option value="curso">Creación de Curso</option>
+        <option value="workshop">CreaciÃ³n de Workshop</option>
+        <option value="curso">CreaciÃ³n de Curso</option>
         <option value="live">Live Sessions</option>
         <option value="diplomatura">Diplomatura</option>
         <option value="asistente">Asistente de Contenido</option>
@@ -524,14 +524,14 @@
 <!-- MAIL PREVIEW MODAL -->
 <div class="modal-overlay" id="mail-modal">
   <div class="modal" style="width:560px">
-    <h3>✉️ Mail de facturación</h3>
-    <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px">Para: <strong id="mail-to"></strong> · Asunto: <strong id="mail-subject"></strong></div>
+    <h3>âï¸ Mail de facturaciÃ³n</h3>
+    <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px">Para: <strong id="mail-to"></strong> Â· Asunto: <strong id="mail-subject"></strong></div>
     <div id="mail-body-preview" style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:14px;font-size:13px;line-height:1.6;max-height:220px;overflow-y:auto;margin-bottom:10px"></div>
     <div id="mail-error-box" style="display:none;background:#FFF5F5;border:1px solid #FED7D7;border-radius:8px;padding:10px 12px;font-size:12px;color:var(--red);margin-bottom:10px;word-break:break-all"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('mail-modal')">Cerrar</button>
-      <button class="btn btn-outline" onclick="copyMailText()" id="copy-mail-btn">📋 Copiar texto</button>
-      <button class="btn btn-primary" onclick="sendMailDraft()" id="send-draft-btn">📨 Abrir en Gmail</button>
+      <button class="btn btn-outline" onclick="copyMailText()" id="copy-mail-btn">ð Copiar texto</button>
+      <button class="btn btn-primary" onclick="sendMailDraft()" id="send-draft-btn">ð¨ Abrir en Gmail</button>
     </div>
   </div>
 </div>
@@ -540,37 +540,37 @@
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-// ─── CONFIG ────────────────────────────────────────────────────────────────
+// âââ CONFIG ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const SHEET_ID = '1gQNCLK0fw8VndKAEvOhCW7w4J-Sou4du6pPfeIchSVc';
 const SHEET_PUBLIC_CSV = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=347249851`;
 const NOTION_FORM = 'https://tally.so/r/5BLpEN';
 const MONTHS_ES = { 'Enero':1,'Febrero':2,'Marzo':3,'Abril':4,'Mayo':5,'Junio':6,'Julio':7,'Agosto':8,'Septiembre':9,'Octubre':10,'Noviembre':11,'Diciembre':12 };
 
 const PRICES = {
-  workshop:   { label:'Creación de Workshop',    amount:50000,  color:'#15803D', bg:'#DCFCE7' },
-  curso:      { label:'Creación de Curso',       amount:80000,  color:'#A16207', bg:'#FEF9C3' },
+  workshop:   { label:'CreaciÃ³n de Workshop',    amount:50000,  color:'#15803D', bg:'#DCFCE7' },
+  curso:      { label:'CreaciÃ³n de Curso',       amount:80000,  color:'#A16207', bg:'#FEF9C3' },
   live:       { label:'Live Sessions',           amount:400000, color:'#7C3AED', bg:'#EDE9FE' },
   diplomatura:{ label:'Diplomatura',             amount:0,      color:'#0369A1', bg:'#E0F2FE' },
   asistente:  { label:'Asistente de Contenido',  amount:700000, color:'#BE185D', bg:'#FFECF1' }
 };
 
 let invoices = [
-  { id:1,  name:'Gastón Klocker',    email:'gklocker73@gmail.com',           product:'workshop', unit:50000,  qty:4,    mailStatus:'sent', driveUrl:null, invoiceFile:null,        cuit:'20378215561', cbu:'0200925811000013477608', submittedAt:null, fromTally:false },
-  { id:2,  name:'Paula Muñoz',       email:'paula.munoz.ricciardi@gmail.com',product:'workshop', unit:50000,  qty:1,    mailStatus:'sent', driveUrl:null, invoiceFile:null,        cuit:'24405969110', cbu:'2850405040095428013198', submittedAt:null, fromTally:false },
-  { id:3,  name:'Jorge Miro',        email:'miro.jorge1@gmail.com',          product:'workshop', unit:50000,  qty:3,    mailStatus:'sent', driveUrl:null, invoiceFile:null,        cuit:'20322778288', cbu:'0440025740000325190299', submittedAt:null, fromTally:false },
-  { id:4,  name:'Emiliano Perez',    email:'emi.perez997@gmail.com',         product:'workshop', unit:50000,  qty:4,    mailStatus:'sent', driveUrl:null, invoiceFile:null,        cuit:'20401280953', cbu:'0070136130004036464909', submittedAt:null, fromTally:false },
-  { id:5,  name:'Laura Therisod',    email:'lauratherisod@gmail.com',        product:'workshop', unit:50000,  qty:2,    mailStatus:'sent', driveUrl:'https://drive.google.com/file/d/1a3YRNUYCi0pw4F4bPArdYJ7QNlUxo8xX/view', invoiceFile:'therisod.pdf', cuit:'27333163247', cbu:'0170097840000035654728', submittedAt:null, fromTally:false },
-  { id:6,  name:'Lorena Bincaz',     email:'loremmabincaz@gmail.com',        product:'workshop', unit:50000,  qty:1,    mailStatus:'sent', driveUrl:null, invoiceFile:'lorena.pdf', cuit:'27269501400', cbu:'3840200500000005295379', submittedAt:null, fromTally:false },
-  { id:7,  name:'Matias Armándola',  email:'marmandola@hotmail.com',         product:'curso',    unit:80000,  qty:2,    mailStatus:'sent', driveUrl:null, invoiceFile:null,        cuit:'20319993437', cbu:'0070689230004003724900', submittedAt:null, fromTally:false },
-  { id:8,  name:'Matias Miro',       email:'mati_miro@hotmail.com',          product:'curso',    unit:80000,  qty:3,    mailStatus:'sent', driveUrl:null, invoiceFile:null,        cuit:'20332142632', cbu:'0070071930004073370913', submittedAt:null, fromTally:false },
-  { id:9,  name:'Melisa Braslavsky', email:'melisa.braslavsky@gmail.com',    product:'live',     unit:400000, qty:null, mailStatus:'sent', driveUrl:null, invoiceFile:'melisa.pdf', cuit:'27367028608', cbu:'1430001713003022710012', submittedAt:null, fromTally:false }
-];
+  { id:1,  name:'Gastón Klocker',    email:'gklocker73@gmail.com',           product:'workshop', unit:50000,  qty:4,    mailStatus:'sent', driveUrl:'https://drive.google.com/file/d/11YMmT7nCi3y8ym3vJRI6jgnOIukXWq7b/view', invoiceFile:'gaston.pdf',       cuit:'20378215561', cbu:'0200925811000013477608', submittedAt:'4 de mayo de 2026 17:35', fromTally:false },
+  { id:2,  name:'Paula Muñoz',       email:'paula.munoz.ricciardi@gmail.com',product:'workshop', unit:50000,  qty:1,    mailStatus:'sent', driveUrl:'https://drive.google.com/file/d/1u9tniCLo8zmMH0UxT4J5vzdWol2dKakE/view', invoiceFile:'paula muñoz.pdf',  cuit:'24405969110', cbu:'2850405040095428013198', submittedAt:'7 de mayo de 2026 15:07', fromTally:false },
+  { id:3,  name:'Jorge Miro',        email:'miro.jorge1@gmail.com',          product:'workshop', unit:50000,  qty:3,    mailStatus:'sent', driveUrl:'https://drive.google.com/file/d/1zYbzJbh_CZsFbFbNZur_oJzGxLVEbV3K/view', invoiceFile:'jorge miro.pdf',   cuit:'20322778288', cbu:'0440025740000325190299', submittedAt:'4 de mayo de 2026 19:10', fromTally:false },
+  { id:4,  name:'Emiliano Perez',    email:'emi.perez997@gmail.com',         product:'workshop', unit:50000,  qty:4,    mailStatus:'sent', driveUrl:'https://drive.google.com/file/d/1iJnmnSsCgsKHiB6bL34HsUDBjQutgXMI/view', invoiceFile:'perez.pdf',        cuit:'20401280953', cbu:'0070136130004036464909', submittedAt:'7 de mayo de 2026 14:17', fromTally:false },
+  { id:5,  name:'Laura Therisod',    email:'lauratherisod@gmail.com',        product:'workshop', unit:50000,  qty:2,    mailStatus:'sent', driveUrl:'https://drive.google.com/file/d/1a3YRNUYCi0pw4F4bPArdYJ7QNlUxo8xX/view', invoiceFile:'therisod.pdf',     cuit:'27333163247', cbu:'0170097840000035654728', submittedAt:'7 de mayo de 2026 15:20', fromTally:false },
+  { id:6,  name:'Lorena Bincaz',     email:'loremmabincaz@gmail.com',        product:'workshop', unit:50000,  qty:1,    mailStatus:'sent', driveUrl:'https://drive.google.com/file/d/1Y4WHB1OyK5B-wJMK26adrWrPRNw6OJqb/view', invoiceFile:'bincaz.pdf',       cuit:'27269501400', cbu:'3840200500000005295379', submittedAt:'4 de mayo de 2026 19:49', fromTally:false },
+  { id:7,  name:'Matias Armándola',  email:'marmandola@hotmail.com',         product:'curso',    unit:80000,  qty:2,    mailStatus:'sent', driveUrl:'https://drive.google.com/file/d/1x-M03VSghxR6rTiwCcSKUhEFVOwHtKXT/view', invoiceFile:'armandola.pdf',    cuit:'20319993437', cbu:'0070689230004003724900', submittedAt:'8 de mayo de 2026 9:59',  fromTally:false },
+  { id:8,  name:'Matias Miro',       email:'mati_miro@hotmail.com',          product:'curso',    unit:80000,  qty:3,    mailStatus:'sent', driveUrl:'https://drive.google.com/file/d/1aqDvMtW2F49g7WE2swEM78f0um0cShoq/view', invoiceFile:'matias miro.pdf',  cuit:'20332142632', cbu:'0070071930004073370913', submittedAt:'4 de mayo de 2026 14:47', fromTally:false },
+  { id:9,  name:'Melisa Braslavsky', email:'melisa.braslavsky@gmail.com',    product:'live',     unit:400000, qty:null, mailStatus:'sent', driveUrl:'https://drive.google.com/file/d/1G4XJaAxDU7tci7PuhWXpIb4-3GFCmUo6/view', invoiceFile:'melisa.pdf',      cuit:'27367028608', cbu:'1430001713003022710012', submittedAt:'6 de mayo de 2026 18:47', fromTally:false }
+]
 let nextId = 10;
 let searchQuery = '', productFilter = '';
 let tallyPendingRows = [];
 let selectedTallyRows = new Set();
 
-// ─── MCP WRAPPER ──────────────────────────────────────────────────────────
+// âââ MCP WRAPPER ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const isCowork = () => !!window.cowork?.callMcpTool;
 
 async function callMcp(tool, args) {
@@ -578,11 +578,11 @@ async function callMcp(tool, args) {
     if (isCowork()) return window.cowork.callMcpTool(tool, args);
     await new Promise(r => setTimeout(r, 500));
   }
-  throw new Error('Conexión con Cowork no disponible.');
+  throw new Error('ConexiÃ³n con Cowork no disponible.');
 }
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────
-const fmt = n => n != null ? '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:0}) : '–';
+// âââ HELPERS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+const fmt = n => n != null ? '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:0}) : 'â';
 const total = inv => (inv.unit && inv.qty) ? inv.unit * inv.qty : (inv.unit || 0);
 function getPaymentDate() {
   const period = document.getElementById('period-select').value;
@@ -596,8 +596,8 @@ function validateInvoice(inv) {
   const errs = [];
   const ref = PRICES[inv.product];
   if (!inv.name?.trim()) errs.push({ type:'error', msg:'Falta nombre.' });
-  if (!inv.email?.includes('@')) errs.push({ type:'error', msg:'Email inválido.' });
-  if (ref && ref.amount > 0 && inv.unit !== ref.amount) errs.push({ type:'error', msg:`Monto incorrecto: debería ser ${fmt(ref.amount)}, tiene ${fmt(inv.unit)}.` });
+  if (!inv.email?.includes('@')) errs.push({ type:'error', msg:'Email invÃ¡lido.' });
+  if (ref && ref.amount > 0 && inv.unit !== ref.amount) errs.push({ type:'error', msg:`Monto incorrecto: deberÃ­a ser ${fmt(ref.amount)}, tiene ${fmt(inv.unit)}.` });
   if (!['live','asistente'].includes(inv.product) && (!inv.qty || inv.qty < 1)) errs.push({ type:'warning', msg:'Cantidad no especificada.' });
   if (!inv.driveUrl && !inv.invoiceFile) errs.push({ type:'warning', msg:'Factura no adjuntada.' });
   return errs;
@@ -615,7 +615,7 @@ function getDuplicates() {
   return dupes;
 }
 
-// ─── RENDER ───────────────────────────────────────────────────────────────
+// âââ RENDER âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function renderPrices() {
   document.getElementById('prices-grid').innerHTML = Object.entries(PRICES).map(([k, p]) => `
     <div class="price-item">
@@ -636,14 +636,14 @@ function renderAlerts() {
   const body = document.getElementById('alerts-body');
   if (!alerts.length) {
     badge.className = 'badge badge-green'; badge.textContent = 'OK';
-    body.innerHTML = `<div class="no-errors">✅ Sin errores — todas las facturas son válidas.</div>`;
+    body.innerHTML = `<div class="no-errors">â Sin errores â todas las facturas son vÃ¡lidas.</div>`;
   } else {
     badge.className = 'badge badge-red'; badge.textContent = alerts.length;
-    body.innerHTML = alerts.map(a => `<div class="alert-item ${a.type === 'error' ? 'error' : 'warning'}"><span style="font-size:14px;flex-shrink:0">${a.type === 'error' ? '🚨' : '⚠️'}</span><span>${a.msg}</span></div>`).join('');
+    body.innerHTML = alerts.map(a => `<div class="alert-item ${a.type === 'error' ? 'error' : 'warning'}"><span style="font-size:14px;flex-shrink:0">${a.type === 'error' ? 'ð¨' : 'â ï¸'}</span><span>${a.msg}</span></div>`).join('');
   }
   const errCount = alerts.filter(a => a.type === 'error').length;
   document.getElementById('stat-errors').textContent = errCount;
-  document.getElementById('stat-errors-sub').textContent = errCount ? `${errCount} error${errCount > 1 ? 'es' : ''} a revisar` : 'Todo OK ✓';
+  document.getElementById('stat-errors-sub').textContent = errCount ? `${errCount} error${errCount > 1 ? 'es' : ''} a revisar` : 'Todo OK â';
 }
 
 function renderTable() {
@@ -659,26 +659,26 @@ function renderTable() {
     const hasErr = errs.some(e => e.type === 'error');
     const p = PRICES[inv.product];
     const t = total(inv);
-    const mailIcon = { pending:'✉️', sending:'⏳', sent:'✅', error:'❌' }[inv.mailStatus] || '✉️';
-    const mailTitle = { pending:'Enviar mail de aviso', sending:'Enviando…', sent:'Mail enviado — clic para reenviar', error:'Error al enviar — reintentar' }[inv.mailStatus] || 'Enviar mail';
+    const mailIcon = { pending:'âï¸', sending:'â³', sent:'â', error:'â' }[inv.mailStatus] || 'âï¸';
+    const mailTitle = { pending:'Enviar mail de aviso', sending:'Enviandoâ¦', sent:'Mail enviado â clic para reenviar', error:'Error al enviar â reintentar' }[inv.mailStatus] || 'Enviar mail';
     const hasInvoice = inv.driveUrl || inv.invoiceFile;
-    const driveIcon = inv.driveUrl ? '📄' : (inv.invoiceFile ? '🔍' : '❓');
+    const driveIcon = inv.driveUrl ? 'ð' : (inv.invoiceFile ? 'ð' : 'â');
     const driveTitle = inv.driveUrl ? 'Ver factura en Drive' : (inv.invoiceFile ? `Buscar "${inv.invoiceFile}" en Drive` : 'Sin factura cargada');
     const cuitInfo = inv.cuit ? `<div class="td-email">CUIT ${inv.cuit}</div>` : '';
-    const submittedInfo = inv.submittedAt ? `<div class="td-email" style="color:var(--green)">📅 ${formatSubmittedAt(inv.submittedAt)}</div>` : '';
+    const submittedInfo = inv.submittedAt ? `<div class="td-email" style="color:var(--green)">ð ${formatSubmittedAt(inv.submittedAt)}</div>` : '';
     return `<tr class="${hasErr ? 'has-error' : ''} ${inv.fromTally ? 'from-tally' : ''}">
       <td><div class="td-name">${inv.name}${inv.fromTally ? '<span class="tally-tag">TALLY</span>' : ''}</div><div class="td-email">${inv.email}</div>${cuitInfo}${submittedInfo}</td>
       <td><span class="product-chip ${chips[inv.product]}">${p.label}</span></td>
       <td class="td-num">${fmt(inv.unit)}</td>
-      <td class="td-num">${inv.qty != null ? inv.qty : '–'}</td>
+      <td class="td-num">${inv.qty != null ? inv.qty : 'â'}</td>
       <td class="td-total">${fmt(t)}</td>
-      <td style="font-size:11px;color:var(--gray-600);white-space:nowrap">${inv.submittedAt ? formatSubmittedAt(inv.submittedAt) : '<span style="color:var(--gray-300)">–</span>'}</td>
+      <td style="font-size:11px;color:var(--gray-600);white-space:nowrap">${inv.submittedAt ? formatSubmittedAt(inv.submittedAt) : '<span style="color:var(--gray-300)">â</span>'}</td>
       <td><div class="status-cell">${renderStatus(errs)}</div></td>
       <td><div class="actions-cell">
         <button class="icon-btn mail-${inv.mailStatus}" title="${mailTitle}" onclick="sendMail(${inv.id})">${mailIcon}</button>
         <button class="icon-btn ${inv.driveUrl ? 'drive-saved' : (inv.invoiceFile ? '' : 'disabled')}" title="${driveTitle}" onclick="viewInvoice(${inv.id})" ${!hasInvoice ? 'style="opacity:.35;cursor:not-allowed"' : ''}>${driveIcon}</button>
-        <button class="icon-btn" title="Editar" onclick="openEdit(${inv.id})">✏️</button>
-        <button class="icon-btn delete" title="Eliminar" onclick="deleteEntry(${inv.id})">🗑️</button>
+        <button class="icon-btn" title="Editar" onclick="openEdit(${inv.id})">âï¸</button>
+        <button class="icon-btn delete" title="Eliminar" onclick="deleteEntry(${inv.id})">ðï¸</button>
       </div></td>
     </tr>`;
   }).join('');
@@ -689,8 +689,8 @@ function renderTable() {
 }
 
 function renderStatus(errs) {
-  if (!errs.length) return `<span class="err-flag ok">✓ OK</span>`;
-  return errs.map(e => `<span class="err-flag ${e.type === 'error' ? 'err' : 'warn'}">${e.type === 'error' ? '✗' : '!'} ${e.msg.split(':').pop().trim().split('.')[0]}</span>`).join('');
+  if (!errs.length) return `<span class="err-flag ok">â OK</span>`;
+  return errs.map(e => `<span class="err-flag ${e.type === 'error' ? 'err' : 'warn'}">${e.type === 'error' ? 'â' : '!'} ${e.msg.split(':').pop().trim().split('.')[0]}</span>`).join('');
 }
 
 function renderStats() {
@@ -716,15 +716,15 @@ function renderFinanceView() {
   const period = getPeriodLabel();
   document.getElementById('finance-period').textContent = period;
   document.getElementById('finance-date').textContent = new Date().toLocaleDateString('es-AR', {day:'2-digit',month:'long',year:'numeric'});
-  const tally = tallyInvoices();
+  const tally = opsInvoices();
   const grandTotal = tally.reduce((s, inv) => s + total(inv), 0);
   document.getElementById('fin-summary').innerHTML = `
     <div class="fin-stat"><div class="lbl">Total a pagar</div><div class="val">${fmt(grandTotal)}</div></div>
     <div class="fin-stat"><div class="lbl">Facturas recibidas</div><div class="val">${tally.length}</div></div>
-    <div class="fin-stat"><div class="lbl">Período</div><div class="val" style="font-size:16px">${period}</div></div>`;
+    <div class="fin-stat"><div class="lbl">PerÃ­odo</div><div class="val" style="font-size:16px">${period}</div></div>`;
   const productDefs = [
     { key:'workshop',    label:'Workshops',              color:'#15803D' },
-    { key:'curso',       label:'Creación de Cursos',     color:'#A16207' },
+    { key:'curso',       label:'CreaciÃ³n de Cursos',     color:'#A16207' },
     { key:'live',        label:'Live Sessions',          color:'#7C3AED' },
     { key:'diplomatura', label:'Diplomaturas',           color:'#0369A1' },
     { key:'asistente',   label:'Asistente de Contenido', color:'#BE185D' }
@@ -742,25 +742,25 @@ function renderFinanceView() {
   const errs = [];
   tally.forEach(inv => validateInvoice(inv).filter(e => e.type === 'error').forEach(e => errs.push(`${inv.name}: ${e.msg}`)));
   document.getElementById('fin-errors-wrap').innerHTML = errs.length
-    ? `<div class="fin-note">⚠️ <strong>${errs.length} error${errs.length > 1 ? 'es' : ''} detectado${errs.length > 1 ? 's' : ''}:</strong> ${errs.join(' · ')}</div>` : '';
+    ? `<div class="fin-note">â ï¸ <strong>${errs.length} error${errs.length > 1 ? 'es' : ''} detectado${errs.length > 1 ? 's' : ''}:</strong> ${errs.join(' Â· ')}</div>` : '';
   const chips = { workshop:'chip-workshop', curso:'chip-curso', live:'chip-live', diplomatura:'chip-diplomatura', asistente:'chip-asistente' };
   document.getElementById('fin-body').innerHTML = tally.map(function(inv, i) {
-    const dateCell = inv.submittedAt ? formatSubmittedAt(inv.submittedAt) : '<span style="color:var(--gray-300)">–</span>';
+    const dateCell = inv.submittedAt ? formatSubmittedAt(inv.submittedAt) : '<span style="color:var(--gray-300)">â</span>';
     let invoiceCell;
     if (inv.driveUrl) {
-      invoiceCell = '<a href="' + inv.driveUrl + '" target="_blank" title="Ver factura" style="font-size:18px;text-decoration:none">📄</a>';
+      invoiceCell = '<a href="' + inv.driveUrl + '" target="_blank" title="Ver factura" style="font-size:18px;text-decoration:none">ð</a>';
     } else if (inv.invoiceFile) {
-      invoiceCell = '<span title="' + inv.invoiceFile + '" style="font-size:16px;opacity:.7;cursor:pointer" onclick="viewInvoice(' + inv.id + ')">🔍</span>';
+      invoiceCell = '<span title="' + inv.invoiceFile + '" style="font-size:16px;opacity:.7;cursor:pointer" onclick="viewInvoice(' + inv.id + ')">ð</span>';
     } else {
-      invoiceCell = '<span title="Sin factura cargada" style="font-size:16px;opacity:.3">📄</span>';
+      invoiceCell = '<span title="Sin factura cargada" style="font-size:16px;opacity:.3">ð</span>';
     }
     return '<tr>' +
       '<td>' + (i+1) + '</td>' +
       '<td><strong>' + inv.name + '</strong></td>' +
-      '<td style="font-size:12px;font-family:monospace">' + (inv.cuit || '<span style="color:var(--gray-400)">–</span>') + '</td>' +
-      '<td style="font-size:11px;font-family:monospace;max-width:170px;overflow:hidden;text-overflow:ellipsis">' + (inv.cbu || '<span style="color:var(--gray-400)">–</span>') + '</td>' +
+      '<td style="font-size:12px;font-family:monospace">' + (inv.cuit || '<span style="color:var(--gray-400)">â</span>') + '</td>' +
+      '<td style="font-size:11px;font-family:monospace;max-width:170px;overflow:hidden;text-overflow:ellipsis">' + (inv.cbu || '<span style="color:var(--gray-400)">â</span>') + '</td>' +
       '<td><span class="product-chip ' + chips[inv.product] + '">' + PRICES[inv.product].label + '</span></td>' +
-      '<td style="text-align:right">' + (inv.qty != null ? inv.qty : '–') + '</td>' +
+      '<td style="text-align:right">' + (inv.qty != null ? inv.qty : 'â') + '</td>' +
       '<td style="text-align:right;font-weight:800">' + fmt(total(inv)) + '</td>' +
       '<td style="color:var(--gray-600);font-size:12px">' + inv.email + '</td>' +
       '<td style="font-size:11px;color:var(--gray-600);white-space:nowrap">' + dateCell + '</td>' +
@@ -768,7 +768,7 @@ function renderFinanceView() {
       '</tr>';
   }).join('');
   if (!tally.length) {
-    document.getElementById('fin-body').innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--gray-400)">⏳ Todavía no hay facturas recibidas vía Tally. Sincronizá cuando los profesores las envíen.</td></tr>`;
+    document.getElementById('fin-body').innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--gray-400)">â³ TodavÃ­a no hay facturas recibidas vÃ­a Tally. SincronizÃ¡ cuando los profesores las envÃ­en.</td></tr>`;
   }
   document.getElementById('fin-foot').innerHTML = tally.length
     ? `<tr><td colspan="6" style="text-align:right;font-weight:700">TOTAL</td><td style="text-align:right;font-size:15px;font-weight:900">${fmt(grandTotal)}</td><td colspan="3"></td></tr>`
@@ -781,7 +781,7 @@ function renderAll() {
   renderTable();
 }
 
-// ─── EMAIL ────────────────────────────────────────────────────────────────
+// âââ EMAIL ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 let _currentMailId = null;
 let _currentMailHtml = '';
 let _currentMailSubject = '';
@@ -793,16 +793,16 @@ function buildMailBody(inv) {
   const t = total(inv);
   const productName = PRICES[inv.product].label.toLowerCase();
   const firstName = inv.name.split(' ')[0];
-  const subject = `Recordatorio de facturación — ${period}`;
+  const subject = `Recordatorio de facturaciÃ³n â ${period}`;
   const htmlBody = `<p>Hola ${firstName},</p>
-<p>Queremos agradecerte por tu compromiso y dedicación en la ${productName}. Estamos muy contentos con los avances logrados y con el esfuerzo que pusiste en este trabajo.</p>
-<p>Para poder avanzar con el pago correspondiente, necesitamos que hoy mismo nos envíes la factura por el trabajo realizado adjuntándola en <a href="${NOTION_FORM}">este formulario</a>. Es importante que verifiques que estén completos todos los campos necesarios.</p>
-<p>Recordá que el pago se acreditará el ${payDate}. En tu caso:</p>
+<p>Queremos agradecerte por tu compromiso y dedicaciÃ³n en la ${productName}. Estamos muy contentos con los avances logrados y con el esfuerzo que pusiste en este trabajo.</p>
+<p>Para poder avanzar con el pago correspondiente, necesitamos que hoy mismo nos envÃ­es la factura por el trabajo realizado adjuntÃ¡ndola en <a href="${NOTION_FORM}">este formulario</a>. Es importante que verifiques que estÃ©n completos todos los campos necesarios.</p>
+<p>RecordÃ¡ que el pago se acreditarÃ¡ el ${payDate}. En tu caso:</p>
 <ul>
 ${inv.qty != null ? `<li><strong>Cantidad de unidades realizadas:</strong> ${inv.qty}</li>` : ''}
 <li><strong>Honorarios:</strong> ${fmt(t)}</li>
 </ul>
-<p>¡Muchas gracias por tu colaboración!</p>
+<p>Â¡Muchas gracias por tu colaboraciÃ³n!</p>
 <p>Saludos,<br>Equipo Coderhouse</p>`;
   return { subject, htmlBody };
 }
@@ -819,8 +819,8 @@ function sendMail(id) {
   document.getElementById('mail-to').textContent = inv.email;
   document.getElementById('mail-subject').textContent = subject;
   document.getElementById('mail-body-preview').innerHTML = htmlBody;
-  // Label differs: Cowork = borrador automático, GitHub = abrir en Gmail
-  document.getElementById('send-draft-btn').textContent = isCowork() ? '📨 Crear borrador en Gmail' : '↗ Abrir en Gmail';
+  // Label differs: Cowork = borrador automÃ¡tico, GitHub = abrir en Gmail
+  document.getElementById('send-draft-btn').textContent = isCowork() ? 'ð¨ Crear borrador en Gmail' : 'â Abrir en Gmail';
   document.getElementById('send-draft-btn').disabled = false;
   document.getElementById('mail-error-box').style.display = 'none';
   document.getElementById('mail-modal').classList.add('open');
@@ -833,7 +833,7 @@ async function sendMailDraft() {
   const errBox = document.getElementById('mail-error-box');
   errBox.style.display = 'none';
 
-  // ── Sin Cowork: abrir Gmail compose directamente en el navegador ──
+  // ââ Sin Cowork: abrir Gmail compose directamente en el navegador ââ
   if (!isCowork()) {
     const tmp = document.createElement('div');
     tmp.innerHTML = _currentMailHtml;
@@ -841,13 +841,13 @@ async function sendMailDraft() {
     const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(_currentMailTo)}&su=${encodeURIComponent(_currentMailSubject)}&body=${encodeURIComponent(plainBody)}`;
     window.open(gmailUrl, '_blank');
     closeModal('mail-modal');
-    showToast('↗ Abriendo Gmail con el mail listo para enviar', 'success');
+    showToast('â Abriendo Gmail con el mail listo para enviar', 'success');
     return;
   }
 
-  // ── Con Cowork: crear borrador automáticamente ──
+  // ââ Con Cowork: crear borrador automÃ¡ticamente ââ
   btn.disabled = true;
-  btn.textContent = '⏳ Creando borrador…';
+  btn.textContent = 'â³ Creando borradorâ¦';
   try {
     const mailResult = await window.cowork.callMcpTool('mcp__ff2884e9-cfd1-4631-99f5-38ced2f8df40__create_draft', {
       to: [inv.email],
@@ -859,14 +859,14 @@ async function sendMailDraft() {
     inv.mailStatus = 'sent';
     renderTable();
     closeModal('mail-modal');
-    showToast(`✅ Borrador creado en Gmail para ${inv.name} — revisalo antes de enviar`, 'success');
+    showToast(`â Borrador creado en Gmail para ${inv.name} â revisalo antes de enviar`, 'success');
   } catch (e) {
     inv.mailStatus = 'error';
     renderTable();
     btn.disabled = false;
-    btn.textContent = '📨 Reintentar';
+    btn.textContent = 'ð¨ Reintentar';
     errBox.style.display = 'block';
-    errBox.innerHTML = '❌ <strong>Error:</strong> ' + (e.message || String(e)) + '<br><small>Usá "Copiar texto" o cerrá y reabrí el tablero.</small>';
+    errBox.innerHTML = 'â <strong>Error:</strong> ' + (e.message || String(e)) + '<br><small>UsÃ¡ "Copiar texto" o cerrÃ¡ y reabrÃ­ el tablero.</small>';
   }
 }
 
@@ -875,13 +875,13 @@ function copyMailText() {
   tmp.innerHTML = _currentMailHtml;
   const plain = `Para: ${_currentMailTo}\nAsunto: ${_currentMailSubject}\n\n${tmp.innerText}`;
   navigator.clipboard.writeText(plain).then(() => {
-    showToast('📋 Mail copiado al portapapeles', 'success');
-    document.getElementById('copy-mail-btn').textContent = '✅ Copiado!';
-    setTimeout(() => { document.getElementById('copy-mail-btn').textContent = '📋 Copiar texto'; }, 2000);
-  }).catch(() => showToast('No se pudo copiar automáticamente', 'error'));
+    showToast('ð Mail copiado al portapapeles', 'success');
+    document.getElementById('copy-mail-btn').textContent = 'â Copiado!';
+    setTimeout(() => { document.getElementById('copy-mail-btn').textContent = 'ð Copiar texto'; }, 2000);
+  }).catch(() => showToast('No se pudo copiar automÃ¡ticamente', 'error'));
 }
 
-// ─── HELPERS DE FECHA ─────────────────────────────────────────────────────
+// âââ HELPERS DE FECHA âââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function formatSubmittedAt(raw) {
   if (!raw) return '';
   try {
@@ -896,7 +896,7 @@ function isTallyUrl(str) {
   return str && (str.startsWith('http://') || str.startsWith('https://'));
 }
 
-// ─── VIEW INVOICE ─────────────────────────────────────────────────────────
+// âââ VIEW INVOICE âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function viewInvoice(id) {
   const inv = invoices.find(i => i.id === id);
   if (!inv) return;
@@ -906,11 +906,11 @@ async function viewInvoice(id) {
     inv.driveUrl = inv.invoiceFile;
     renderTable();
     window.open(inv.invoiceFile, '_blank');
-    showToast(`📄 Abriendo factura de ${inv.name}`, 'success');
+    showToast(`ð Abriendo factura de ${inv.name}`, 'success');
     return;
   }
-  if (!isCowork()) { showToast('📁 Archivo: "' + inv.invoiceFile + '" — guardado en Drive. Abrí desde Cowork para verlo.', 'error'); return; }
-  showToast(`🔍 Buscando "${inv.invoiceFile}" en Drive…`, 'info');
+  if (!isCowork()) { showToast('ð Archivo: "' + inv.invoiceFile + '" â guardado en Drive. AbrÃ­ desde Cowork para verlo.', 'error'); return; }
+  showToast(`ð Buscando "${inv.invoiceFile}" en Driveâ¦`, 'info');
   try {
     function parseDriveFiles(r) {
       if (r?.isError) return [];
@@ -925,7 +925,7 @@ async function viewInvoice(id) {
       inv.driveUrl = f.viewUrl || `https://drive.google.com/file/d/${f.id}/view`;
       renderTable();
       window.open(inv.driveUrl, '_blank');
-      showToast(`📄 Factura de ${inv.name} encontrada en Drive`, 'success');
+      showToast(`ð Factura de ${inv.name} encontrada en Drive`, 'success');
     } else {
       const apellido = inv.name.trim().split(' ').pop().toLowerCase();
       const fb = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__search_files', {
@@ -937,29 +937,29 @@ async function viewInvoice(id) {
         inv.driveUrl = f.viewUrl || `https://drive.google.com/file/d/${f.id}/view`;
         renderTable();
         window.open(inv.driveUrl, '_blank');
-        showToast(`📄 Factura encontrada (verificar que sea la correcta)`, 'success');
+        showToast(`ð Factura encontrada (verificar que sea la correcta)`, 'success');
       } else {
-        showToast(`⚠️ No se encontró "${inv.invoiceFile}" en Drive`, 'error');
+        showToast(`â ï¸ No se encontrÃ³ "${inv.invoiceFile}" en Drive`, 'error');
       }
     }
   } catch(e) {
-    showToast(`❌ Error buscando en Drive: ${e.message || e}`, 'error');
+    showToast(`â Error buscando en Drive: ${e.message || e}`, 'error');
   }
 }
 
-// ─── PDF GENERATOR ────────────────────────────────────────────────────────
+// âââ PDF GENERATOR ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function buildInvoicePDF(inv) {
   const period = getPeriodLabel();
   const payDate = getPaymentDate();
   const t = total(inv);
   const today = new Date().toLocaleDateString('es-AR');
   const san = s => (s||'')
-    .replace(/[áàâä]/gi, c => c===c.toUpperCase()?'A':'a')
-    .replace(/[éèêë]/gi, c => c===c.toUpperCase()?'E':'e')
-    .replace(/[íìîï]/gi, c => c===c.toUpperCase()?'I':'i')
-    .replace(/[óòôö]/gi, c => c===c.toUpperCase()?'O':'o')
-    .replace(/[úùûü]/gi, c => c===c.toUpperCase()?'U':'u')
-    .replace(/[ñ]/g,'n').replace(/[Ñ]/g,'N')
+    .replace(/[Ã¡Ã Ã¢Ã¤]/gi, c => c===c.toUpperCase()?'A':'a')
+    .replace(/[Ã©Ã¨ÃªÃ«]/gi, c => c===c.toUpperCase()?'E':'e')
+    .replace(/[Ã­Ã¬Ã®Ã¯]/gi, c => c===c.toUpperCase()?'I':'i')
+    .replace(/[Ã³Ã²Ã´Ã¶]/gi, c => c===c.toUpperCase()?'O':'o')
+    .replace(/[ÃºÃ¹Ã»Ã¼]/gi, c => c===c.toUpperCase()?'U':'u')
+    .replace(/[Ã±]/g,'n').replace(/[Ã]/g,'N')
     .replace(/[()\\]/g, c => '\\' + c)
     .replace(/[^\x20-\x7E]/g, '?');
   const fmtP = n => n != null ? '$' + Number(n).toLocaleString('es-AR',{minimumFractionDigits:0}) : '';
@@ -1018,12 +1018,12 @@ function buildInvoicePDF(inv) {
   return hdr + allObjs.join('') + xref + trailer;
 }
 
-// ─── DRIVE ────────────────────────────────────────────────────────────────
+// âââ DRIVE ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function saveToDrive(id) {
   const inv = invoices.find(i => i.id === id);
   if (!inv) return;
   const period = getPeriodLabel();
-  showToast('💾 Generando PDF y subiendo a Drive…', 'info');
+  showToast('ð¾ Generando PDF y subiendo a Driveâ¦', 'info');
   try {
     const pdfStr = buildInvoicePDF(inv);
     const b64 = btoa(pdfStr);
@@ -1041,16 +1041,16 @@ async function saveToDrive(id) {
     } catch(e2) {}
     inv.driveUrl = url || 'https://drive.google.com';
     renderTable();
-    showToast(`📄 PDF guardado en Drive: ${inv.name}`, 'success');
+    showToast(`ð PDF guardado en Drive: ${inv.name}`, 'success');
   } catch (e) {
-    showToast(`❌ Error al guardar PDF en Drive: ${e.message || e}`, 'error');
+    showToast(`â Error al guardar PDF en Drive: ${e.message || e}`, 'error');
   }
 }
 
-// ─── TALLY SYNC ───────────────────────────────────────────────────────────
+// âââ TALLY SYNC âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function openTallySync() {
-  showToast('🔄 Leyendo respuestas del formulario…', 'info');
-  document.getElementById('tally-rows-container').innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400)">⏳ Cargando datos de Tally…</div>';
+  showToast('ð Leyendo respuestas del formularioâ¦', 'info');
+  document.getElementById('tally-rows-container').innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400)">â³ Cargando datos de Tallyâ¦</div>';
   document.getElementById('tally-modal').classList.add('open');
   selectedTallyRows.clear();
 
@@ -1058,7 +1058,7 @@ async function openTallySync() {
     let csvText;
 
     if (isCowork()) {
-      // ── Cowork: leer via MCP (autenticado) ──
+      // ââ Cowork: leer via MCP (autenticado) ââ
       const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__download_file_content', {
         fileId: SHEET_ID, exportMimeType: 'text/csv'
       });
@@ -1070,20 +1070,20 @@ async function openTallySync() {
       if (!b64) throw new Error('No se pudo extraer contenido del Sheet');
       csvText = decodeBase64UTF8(b64.replace(/\s/g,''));
     } else {
-      // ── GitHub Pages / Chrome: leer via URL pública del Sheet ──
+      // ââ GitHub Pages / Chrome: leer via URL pÃºblica del Sheet ââ
       const res = await fetch(SHEET_PUBLIC_CSV);
-      if (!res.ok) throw new Error(`HTTP ${res.status} — ¿El Sheet es público? (Compartir → "Cualquiera con el link")`);
+      if (!res.ok) throw new Error(`HTTP ${res.status} â Â¿El Sheet es pÃºblico? (Compartir â "Cualquiera con el link")`);
       csvText = await res.text();
     }
 
     parseTallyContent(csvText);
   } catch (e) {
     document.getElementById('tally-rows-container').innerHTML =
-      '<div style="color:var(--red);padding:12px">❌ Error: ' + (e.message || e) + '</div>';
+      '<div style="color:var(--red);padding:12px">â Error: ' + (e.message || e) + '</div>';
   }
 }
 
-// Custom base64 decoder — avoids atob() DOMException issues
+// Custom base64 decoder â avoids atob() DOMException issues
 function decodeBase64UTF8(b64) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   const clean = b64.replace(/[^A-Za-z0-9+/=]/g, '');
@@ -1120,8 +1120,8 @@ function parseTallyContent(rawText) {
   const lines = rawText.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l => l.trim().length > 0);
   if (lines.length < 2) {
     document.getElementById('tally-rows-container').innerHTML =
-      '<div style="padding:12px"><div style="color:var(--gray-400)">No hay respuestas en el formulario aún.</div>' +
-      '<details style="margin-top:8px;font-size:11px"><summary>🔍 Debug (primeros 500 chars)</summary>' +
+      '<div style="padding:12px"><div style="color:var(--gray-400)">No hay respuestas en el formulario aÃºn.</div>' +
+      '<details style="margin-top:8px;font-size:11px"><summary>ð Debug (primeros 500 chars)</summary>' +
       '<pre style="background:#f5f5f5;padding:8px;font-size:10px;white-space:pre-wrap;overflow:auto;max-height:200px">' +
       rawText.substring(0,500).replace(/</g,'&lt;') + '</pre></details></div>';
     return;
@@ -1148,7 +1148,7 @@ function parseTallyContent(rawText) {
   }
   const nameIdx    = findFirstIdx(['nombre y apellido','contenidista','nombre','name','apellido','full name']);
   const emailIdx   = findFirstIdx(['email','mail','correo']);
-  const productIdx = findFirstIdx(['proyecto','producto','product','tipo de','servicio','qué creaste','que creaste']);
+  const productIdx = findFirstIdx(['proyecto','producto','product','tipo de','servicio','quÃ© creaste','que creaste']);
   const dateIdx    = findFirstIdx(['submitted at','submitted_at','created at','timestamp','fecha']);
   const cuitIdx    = findFirstIdx(['cuit']);
   const cbuIdx     = findFirstIdx(['cbu','alias']);
@@ -1177,7 +1177,7 @@ function parseTallyContent(rawText) {
     const key = email.toLowerCase() + '_' + product;
     tallyPendingRows.push({ idx, name, email, product, qty: null, unit: amount, cuit, cbu, invoiceFile, submittedAt, alreadyImported: existing.has(key) });
   });
-  // ── Filtrar por período seleccionado ──
+  // ââ Filtrar por perÃ­odo seleccionado ââ
   const period = getPeriodLabel();
   const pParts = period.split(' ');
   const pMonth = MONTHS_ES[pParts[0]];
@@ -1191,8 +1191,8 @@ function parseTallyContent(rawText) {
   const newRows = tallyPendingRows.filter(r => !r.alreadyImported);
   if (!newRows.length) {
     document.getElementById('tally-rows-container').innerHTML =
-      '<div style="padding:12px"><div class="no-errors">✅ No hay respuestas nuevas — todo ya fue importado.</div>' +
-      '<details style="margin-top:8px;font-size:11px;color:var(--gray-400)"><summary>🔍 Debug</summary>' +
+      '<div style="padding:12px"><div class="no-errors">â No hay respuestas nuevas â todo ya fue importado.</div>' +
+      '<details style="margin-top:8px;font-size:11px;color:var(--gray-400)"><summary>ð Debug</summary>' +
       '<pre style="background:#f5f5f5;padding:8px;font-size:10px;white-space:pre-wrap;overflow:auto;max-height:200px">' +
       'sep="' + sep + '" | headers (' + headers.length + '):\n' + headers.map((h,i)=>i+':"'+h+'"').join(' | ') +
       '\nnombre=col'+nameIdx+' email=col'+emailIdx+' producto=col'+productIdx+' cuit=col'+cuitIdx+' cbu=col'+cbuIdx+' factura=col'+invoiceIdx+' fecha=col'+dateIdx+
@@ -1227,7 +1227,7 @@ function renderTallyRows() {
       <div class="tally-check" id="tcheck-${i}"></div>
       <div class="tally-info">
         <div class="tally-name">${r.name || '(sin nombre)'}</div>
-        <div class="tally-detail">${r.email || '(sin email)'} · ${PRICES[r.product]?.label || r.product} · Cant: ${r.qty ?? '–'}${r.cuit ? ' · CUIT: '+r.cuit : ''}${r.submittedAt ? ' · 📅 '+formatSubmittedAt(r.submittedAt) : ''}${r.invoiceFile ? ' · 📄 '+(isTallyUrl(r.invoiceFile) ? 'Factura Tally ✓' : r.invoiceFile) : ' · ⚠️ sin factura'}</div>
+        <div class="tally-detail">${r.email || '(sin email)'} Â· ${PRICES[r.product]?.label || r.product} Â· Cant: ${r.qty ?? 'â'}${r.cuit ? ' Â· CUIT: '+r.cuit : ''}${r.submittedAt ? ' Â· ð '+formatSubmittedAt(r.submittedAt) : ''}${r.invoiceFile ? ' Â· ð '+(isTallyUrl(r.invoiceFile) ? 'Factura Tally â' : r.invoiceFile) : ' Â· â ï¸ sin factura'}</div>
       </div>
       <div class="tally-amount">${fmt(r.unit && r.qty ? r.unit * r.qty : r.unit)}</div>
     </div>`).join('');
@@ -1237,11 +1237,11 @@ function toggleTallyRow(i) {
   if (selectedTallyRows.has(i)) selectedTallyRows.delete(i);
   else selectedTallyRows.add(i);
   document.getElementById(`trow-${i}`).classList.toggle('selected', selectedTallyRows.has(i));
-  document.getElementById(`tcheck-${i}`).textContent = selectedTallyRows.has(i) ? '✓' : ' ';
+  document.getElementById(`tcheck-${i}`).textContent = selectedTallyRows.has(i) ? 'â' : ' ';
 }
 
 function importSelected() {
-  if (!selectedTallyRows.size) { showToast('Seleccioná al menos una fila', 'error'); return; }
+  if (!selectedTallyRows.size) { showToast('SeleccionÃ¡ al menos una fila', 'error'); return; }
   selectedTallyRows.forEach(i => {
     const r = tallyPendingRows[i];
     if (!r) return;
@@ -1252,7 +1252,7 @@ function importSelected() {
   closeTallyModal();
   renderAll();
   if (document.getElementById('finance-view').style.display !== 'none') renderFinanceView();
-  showToast(`✅ ${count} factura${count > 1 ? 's' : ''} importada${count > 1 ? 's' : ''} desde Tally`, 'success');
+  showToast(`â ${count} factura${count > 1 ? 's' : ''} importada${count > 1 ? 's' : ''} desde Tally`, 'success');
 }
 
 function closeTallyModal() {
@@ -1260,7 +1260,7 @@ function closeTallyModal() {
   selectedTallyRows.clear();
 }
 
-// ─── INTERACTIONS ─────────────────────────────────────────────────────────
+// âââ INTERACTIONS âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function switchView(v) {
   document.getElementById('ops-view').style.display = v === 'ops' ? 'block' : 'none';
   document.getElementById('finance-view').style.display = v === 'finance' ? 'block' : 'none';
@@ -1273,13 +1273,13 @@ function toggleSection(bodyId, iconId) {
   const icon = document.getElementById(iconId);
   const open = body.style.display !== 'none';
   body.style.display = open ? 'none' : '';
-  icon.textContent = open ? '▶' : '▼';
+  icon.textContent = open ? 'â¶' : 'â¼';
 }
 
 function toggleForm() {
   const body = document.getElementById('form-body');
   body.classList.toggle('open');
-  document.getElementById('form-icon').textContent = body.classList.contains('open') ? '▲' : '▼';
+  document.getElementById('form-icon').textContent = body.classList.contains('open') ? 'â²' : 'â¼';
 }
 
 function filterTable(q) { searchQuery = q; renderTable(); }
@@ -1295,7 +1295,7 @@ function editPrice(k) {
   const v = prompt(`Nuevo monto para "${PRICES[k].label}":`, PRICES[k].amount);
   if (v === null) return;
   const n = parseFloat(v.replace(/[^0-9.,]/g,'').replace(',','.'));
-  if (isNaN(n) || n <= 0) { alert('Ingresá un monto válido.'); return; }
+  if (isNaN(n) || n <= 0) { alert('IngresÃ¡ un monto vÃ¡lido.'); return; }
   PRICES[k].amount = n;
   renderAll();
 }
@@ -1314,9 +1314,9 @@ function previewEntry() {
   const prev = document.getElementById('form-preview');
   if (!name || !product) { prev.classList.remove('visible'); return; }
   const t = unit && qty ? unit * qty : unit;
-  const warn = PRICES[product] && unit !== PRICES[product].amount ? ` ⚠️ Monto ≠ tarifa de referencia (${fmt(PRICES[product].amount)})` : '';
+  const warn = PRICES[product] && unit !== PRICES[product].amount ? ` â ï¸ Monto â  tarifa de referencia (${fmt(PRICES[product].amount)})` : '';
   prev.classList.add('visible');
-  prev.innerHTML = `Vista previa: <strong>${name}</strong> · ${PRICES[product].label} · ${fmt(unit)} × ${qty||'–'} = <strong>${fmt(t)}</strong>${warn}`;
+  prev.innerHTML = `Vista previa: <strong>${name}</strong> Â· ${PRICES[product].label} Â· ${fmt(unit)} Ã ${qty||'â'} = <strong>${fmt(t)}</strong>${warn}`;
 }
 
 function addEntry() {
@@ -1326,7 +1326,7 @@ function addEntry() {
   const unit = parseFloat(document.getElementById('f-unit').value) || 0;
   const qty = parseFloat(document.getElementById('f-qty').value) || null;
   const mailStatus = document.getElementById('f-mail').value === 'si' ? 'sent' : 'pending';
-  if (!name || !email || !product) { alert('Completá nombre, email y producto.'); return; }
+  if (!name || !email || !product) { alert('CompletÃ¡ nombre, email y producto.'); return; }
   invoices.push({ id: nextId++, name, email, product, unit, qty, mailStatus, driveUrl: null, invoiceFile: null, cuit: null, cbu: null, submittedAt: null, fromTally: false });
   clearForm();
   renderAll();
@@ -1340,7 +1340,7 @@ function clearForm() {
 }
 
 function deleteEntry(id) {
-  if (!confirm('¿Eliminar esta factura?')) return;
+  if (!confirm('Â¿Eliminar esta factura?')) return;
   invoices = invoices.filter(i => i.id !== id);
   renderAll();
 }
@@ -1388,12 +1388,12 @@ function exportCSV() {
   invoices.forEach(inv => rows.push([inv.name, inv.email, PRICES[inv.product].label, inv.unit, inv.qty ?? '', total(inv), inv.mailStatus, inv.driveUrl || '']));
   const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
   const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+  a.href = 'data:text/csv;charset=utf-8,ï»¿' + encodeURIComponent(csv);
   a.download = `liquidacion_${getPeriodLabel().replace(' ','_')}.csv`;
   a.click();
 }
 
-// ─── TOAST ────────────────────────────────────────────────────────────────
+// âââ TOAST ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function showToast(msg, type = 'info') {
   const container = document.getElementById('toast-container');
   const div = document.createElement('div');
@@ -1408,7 +1408,7 @@ function showToast(msg, type = 'info') {
   document.getElementById(id).addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(id); });
 });
 
-// ─── INIT ─────────────────────────────────────────────────────────────────
+// âââ INIT âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 renderAll();
 </script>
 </div><!-- /app -->
