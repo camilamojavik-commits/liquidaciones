@@ -796,7 +796,9 @@ function buildMailBody(inv) {
   const subject = `Recordatorio de facturación — ${period}`;
   const htmlBody = `<p>Hola ${firstName},</p>
 <p>Queremos agradecerte por tu compromiso y dedicación en la ${productName}. Estamos muy contentos con los avances logrados y con el esfuerzo que pusiste en este trabajo.</p>
-<p>Para poder avanzar con el pago correspondiente, necesitamos que hoy mismo nos envíes la factura por el trabajo realizado adjuntándola en <a href="${NOTION_FORM}">este formulario</a>. Es importante que verifiques que estén completos todos los campos necesarios.</p>
+<p>Para poder avanzar con el pago correspondiente, necesitamos que hoy mismo nos envíes la factura por el trabajo realizado adjuntándola en el siguiente formulario:</p>
+<p><a href="${NOTION_FORM}">${NOTION_FORM}</a></p>
+<p>Es importante que verifiques que estén completos todos los campos necesarios.</p>
 <p>Recordá que el pago se acreditará el ${payDate}. En tu caso:</p>
 <ul>
 ${inv.qty != null ? `<li><strong>Cantidad de unidades realizadas:</strong> ${inv.qty}</li>` : ''}
