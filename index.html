@@ -572,6 +572,22 @@ let selectedTallyRows = new Set();
 
 // ─── MCP WRAPPER ──────────────────────────────────────────────────────────
 const isCowork = () => !!window.cowork?.callMcpTool;
+// ─── PERSISTENCIA LOCAL ───────────────────────────────────────────────────
+const LS_KEY = 'liq_data_v1';
+function saveToLS() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ invoices, nextId })); } catch(e) {}
+}
+function loadFromLS() {
+  try {
+    const d = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+    if (d && Array.isArray(d.invoices) && d.invoices.length) {
+      invoices = d.invoices;
+      if (d.nextId) nextId = d.nextId;
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
 
 async function callMcp(tool, args) {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -1251,6 +1267,7 @@ function importSelected() {
     invoices.push({ id: nextId++, name: r.name, email: r.email, product: r.product, unit: r.unit, qty: r.qty, mailStatus: 'pending', driveUrl: isUrl ? r.invoiceFile : null, invoiceFile: isUrl ? null : (r.invoiceFile || null), cuit: r.cuit || null, cbu: r.cbu || null, submittedAt: r.submittedAt || null, fromTally: true });
   });
   const count = selectedTallyRows.size;
+  saveToLS();
   closeTallyModal();
   renderAll();
   if (document.getElementById('finance-view').style.display !== 'none') renderFinanceView();
@@ -1330,6 +1347,7 @@ function addEntry() {
   const mailStatus = document.getElementById('f-mail').value === 'si' ? 'sent' : 'pending';
   if (!name || !email || !product) { alert('Completá nombre, email y producto.'); return; }
   invoices.push({ id: nextId++, name, email, product, unit, qty, mailStatus, driveUrl: null, invoiceFile: null, cuit: null, cbu: null, submittedAt: null, fromTally: false });
+  saveToLS();
   clearForm();
   renderAll();
 }
@@ -1344,6 +1362,7 @@ function clearForm() {
 function deleteEntry(id) {
   if (!confirm('¿Eliminar esta factura?')) return;
   invoices = invoices.filter(i => i.id !== id);
+  saveToLS();
   renderAll();
 }
 
@@ -1377,6 +1396,7 @@ function saveEdit() {
   inv.qty = parseFloat(document.getElementById('edit-qty').value) || null;
   inv.cuit = document.getElementById('edit-cuit').value.trim() || null;
   inv.cbu = document.getElementById('edit-cbu').value.trim() || null;
+  saveToLS();
   closeModal('edit-modal');
   renderAll();
 }
@@ -1411,6 +1431,7 @@ function showToast(msg, type = 'info') {
 });
 
 // ─── INIT ─────────────────────────────────────────────────────────────────
+loadFromLS(); // restaurar datos guardados
 renderAll();
 </script>
 </div><!-- /app -->
