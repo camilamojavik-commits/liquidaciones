@@ -914,365 +914,255 @@ function isTallyUrl(str) {
   return str && (str.startsWith('http://') || str.startsWith('https://'));
 }
 
-// ─── VIEW INVOICE ─────────────────────────────────────────────────────────
-async function viewInvoice(id) {
-  const inv = invoices.find(i => i.id === id);
-  if (!inv) return;
-  if (inv.driveUrl) { window.open(inv.driveUrl, '_blank'); return; }
-  if (!inv.invoiceFile) { showToast('Sin factura cargada para este contenidista', 'error'); return; }
-  if (isTallyUrl(inv.invoiceFile)) {
-    inv.driveUrl = inv.invoiceFile;
-    renderTable();
-    window.open(inv.invoiceFile, '_blank');
-    showToast(`📄 Abriendo factura de ${inv.name}`, 'success');
-    return;
-  }
-  if (!isCowork()) { showToast('📁 Archivo: "' + inv.invoiceFile + '" — guardado en Drive. Abrí desde Cowork para verlo.', 'error'); return; }
-  showToast(`🔍 Buscando "${inv.invoiceFile}" en Drive…`, 'info');
-  try {
-    function parseDriveFiles(r) {
-      if (r?.isError) return [];
-      try { return JSON.parse(r?.content?.[0]?.text || '{}')?.files || []; } catch(e2) { return r?.files || []; }
-    }
-    const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__search_files', {
-      query: `title = '${inv.invoiceFile.replace(/'/g, "\\'")}'`, pageSize: 5
-    });
-    const files = parseDriveFiles(result);
-    if (files.length > 0) {
-      const f = files[0];
-      inv.driveUrl = f.viewUrl || `https://drive.google.com/file/d/${f.id}/view`;
-      renderTable();
-      window.open(inv.driveUrl, '_blank');
-      showToast(`📄 Factura de ${inv.name} encontrada en Drive`, 'success');
-    } else {
-      const apellido = inv.name.trim().split(' ').pop().toLowerCase();
-      const fb = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__search_files', {
-        query: `title contains '${apellido}' and mimeType = 'application/pdf'`, pageSize: 5
-      });
-      const fbFiles = parseDriveFiles(fb);
-      if (fbFiles.length > 0) {
-        const f = fbFiles[0];
-        inv.driveUrl = f.viewUrl || `https://drive.google.com/file/d/${f.id}/view`;
-        renderTable();
-        window.open(inv.driveUrl, '_blank');
-        showToast(`📄 Factura encontrada (verificar que sea la correcta)`, 'success');
-      } else {
-        showToast(`⚠️ No se encontró "${inv.invoiceFile}" en Drive`, 'error');
+// ─── TALLY SYNC v2 (JSONP) ─────────────────────────────────────────────
+(function patchTallySync() {
+  const SHEET_ID = '1gQNCLK0fw8VndKAEvOhCW7w4J-Sou4du6pPfeIchSVc';
+  const SHEET_GID = '347249851';
+
+  const PRODUCT_KEYWORDS = [
+    { kw: 'live session', val: 'live'        },
+    { kw: 'workshop',     val: 'workshop'    },
+    { kw: 'creaci',       val: 'curso'       },
+    { kw: 'diplomatura',  val: 'diplomatura' },
+    { kw: 'asistente',    val: 'asistente'   }
+  ];
+
+  const PRODUCT_LABELS = {
+    workshop:    'Creación de Workshop',
+    curso:       'Creación de Curso',
+    live:        'Live Sessions',
+    diplomatura: 'Diplomatura',
+    asistente:   'Asistente de Contenido'
+  };
+
+  let _rows = [];
+
+  window.openTallySync = function () {
+    const modal     = document.getElementById('tally-modal');
+    const container = document.getElementById('tally-rows-container');
+    const emptyEl   = document.getElementById('tally-empty');
+    const importBtn = document.getElementById('import-btn');
+
+    modal.style.display = 'flex';
+    if (emptyEl)   emptyEl.style.display = 'none';
+    if (importBtn) importBtn.disabled = true;
+    container.innerHTML = '<p style="text-align:center;color:#999;padding:28px 16px">⏳ Cargando desde Google Sheets…</p>';
+
+    const cbName = '_tgviz' + Date.now();
+    const script  = document.createElement('script');
+
+    window[cbName] = function (resp) {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      if (!resp || !resp.table) {
+        container.innerHTML = '<p style="text-align:center;color:#e74c3c;padding:20px">❌ No se recibieron datos.<br><small>Verificá que estás logueada en Google con acceso al Sheet.</small></p>';
+        return;
       }
-    }
-  } catch(e) {
-    showToast(`❌ Error buscando en Drive: ${e.message || e}`, 'error');
-  }
-}
+      _buildRows(resp.table.cols || [], resp.table.rows || []);
+    };
 
-// ─── PDF GENERATOR ────────────────────────────────────────────────────────
-function buildInvoicePDF(inv) {
-  const period = getPeriodLabel();
-  const payDate = getPaymentDate();
-  const t = total(inv);
-  const today = new Date().toLocaleDateString('es-AR');
-  const san = s => (s||'')
-    .replace(/[áàâä]/gi, c => c===c.toUpperCase()?'A':'a')
-    .replace(/[éèêë]/gi, c => c===c.toUpperCase()?'E':'e')
-    .replace(/[íìîï]/gi, c => c===c.toUpperCase()?'I':'i')
-    .replace(/[óòôö]/gi, c => c===c.toUpperCase()?'O':'o')
-    .replace(/[úùûü]/gi, c => c===c.toUpperCase()?'U':'u')
-    .replace(/[ñ]/g,'n').replace(/[Ñ]/g,'N')
-    .replace(/[()\\]/g, c => '\\' + c)
-    .replace(/[^\x20-\x7E]/g, '?');
-  const fmtP = n => n != null ? '$' + Number(n).toLocaleString('es-AR',{minimumFractionDigits:0}) : '';
-  const txt = (x, y, font, size, str) => `BT /F${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${san(str)}) Tj ET`;
-  const cs = [
-    '0 0 0 rg', '0 700 612 92 re f',
-    '1 1 1 rg',
-    txt(40, 752, 2, 22, 'CODERHOUSE'),
-    txt(40, 728, 1, 10, 'Comprobante de Liquidacion'),
-    txt(300, 728, 1, 10, period),
-    '0 0 0 rg',
-    txt(40, 668, 2, 12, 'Detalle de pago'),
-    '0.80 0.80 0.80 RG 0.5 w 40 658 m 572 658 l S',
-    '0.50 0.50 0.50 rg',
-    txt(40,  641, 1, 7.5, 'NOMBRE Y APELLIDO'),
-    txt(310, 641, 1, 7.5, 'PRODUCTO'),
-    '0 0 0 rg',
-    txt(40,  624, 2, 11, inv.name),
-    txt(310, 624, 1, 11, PRICES[inv.product].label),
-    '0.93 0.93 0.93 RG 0.4 w 40 613 m 572 613 l S',
-    '0.50 0.50 0.50 rg',
-    txt(40,  600, 1, 7.5, 'EMAIL'),
-    txt(310, 600, 1, 7.5, 'FECHA DE PAGO'),
-    '0 0 0 rg',
-    txt(40,  584, 1, 10, inv.email),
-    txt(310, 584, 2, 11, payDate),
-    '0.93 0.93 0.93 RG 0.4 w 40 573 m 572 573 l S',
-    '0.50 0.50 0.50 rg',
-    txt(40,  560, 1, 7.5, 'MONTO POR UNIDAD'),
-    inv.qty != null ? txt(310, 560, 1, 7.5, 'CANTIDAD') : '',
-    '0 0 0 rg',
-    txt(40,  544, 1, 11, fmtP(inv.unit)),
-    inv.qty != null ? txt(310, 544, 2, 11, String(inv.qty)) : '',
-    '0.05 0.05 0.05 rg', '40 450 532 72 re f',
-    '1 1 1 rg',
-    txt(55, 510, 1, 8,  'TOTAL A COBRAR'),
-    txt(55, 466, 2, 28, fmtP(t)),
-    '0.80 0.80 0.80 RG 0.4 w 40 52 m 572 52 l S',
-    '0.60 0.60 0.60 rg',
-    txt(40,  38, 1, 8, 'Emitido por Coderhouse Ops - ' + today),
-    txt(410, 38, 1, 8, 'Pago acreditado: ' + payDate),
-  ].filter(Boolean).join('\n');
-  const o1 = '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n';
-  const o2 = '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n';
-  const o3 = '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>\nendobj\n';
-  const o4 = `4 0 obj\n<< /Length ${cs.length} >>\nstream\n${cs}\nendstream\nendobj\n`;
-  const o5 = '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n';
-  const o6 = '6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n';
-  const allObjs = [o1, o2, o3, o4, o5, o6];
-  let hdr = '%PDF-1.4\n', pos = hdr.length;
-  const xPos = [];
-  allObjs.forEach(o => { xPos.push(pos); pos += o.length; });
-  const xrefStart = pos;
-  const xref = `xref\n0 7\n0000000000 65535 f \n${xPos.map(p => String(p).padStart(10,'0') + ' 00000 n ').join('\n')}\n`;
-  const trailer = `trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
-  return hdr + allObjs.join('') + xref + trailer;
-}
+    script.onerror = function () {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      container.innerHTML = '<p style="text-align:center;color:#e74c3c;padding:20px">❌ Error de conexión con Google Sheets.</p>';
+    };
 
-// ─── DRIVE ────────────────────────────────────────────────────────────────
-async function saveToDrive(id) {
-  const inv = invoices.find(i => i.id === id);
-  if (!inv) return;
-  const period = getPeriodLabel();
-  showToast('💾 Generando PDF y subiendo a Drive…', 'info');
-  try {
-    const pdfStr = buildInvoicePDF(inv);
-    const b64 = btoa(pdfStr);
-    const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__create_file', {
-      title: `Factura_${inv.name.replace(/\s+/g,'_')}_${period.replace(' ','_')}.pdf`,
-      base64Content: b64,
-      contentMimeType: 'application/pdf',
-      disableConversionToGoogleType: true
-    });
-    if (result?.isError) throw new Error(result.content?.[0]?.text || 'Error al subir a Drive');
-    let url = null;
-    try {
-      const parsed = JSON.parse(result?.content?.[0]?.text || '{}');
-      url = parsed.alternateLink || parsed.webViewLink || (parsed.id ? `https://drive.google.com/file/d/${parsed.id}/view` : null);
-    } catch(e2) {}
-    inv.driveUrl = url || 'https://drive.google.com';
-    renderTable();
-    showToast(`📄 PDF guardado en Drive: ${inv.name}`, 'success');
-  } catch (e) {
-    showToast(`❌ Error al guardar PDF en Drive: ${e.message || e}`, 'error');
-  }
-}
+    script.src =
+      'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
+      '/gviz/tq?tqx=out:json&callback=' + cbName + '&gid=' + SHEET_GID;
+    document.head.appendChild(script);
+  };
 
-// ─── TALLY SYNC ───────────────────────────────────────────────────────────
-async function openTallySync() {
-  showToast('🔄 Leyendo respuestas del formulario…', 'info');
-  document.getElementById('tally-rows-container').innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400)">⏳ Cargando datos de Tally…</div>';
-  document.getElementById('tally-modal').classList.add('open');
-  selectedTallyRows.clear();
+  function _buildRows(cols, rows) {
+    const idx = { nombre: 3, email: 4, cuit: 5, cbu: 6, date: 2, factura: 11, monto: 12 };
+    const prodIdx = {};
 
-  try {
-    let csvText;
-
-    if (isCowork()) {
-      // ── Cowork: leer via MCP (autenticado) ──
-      const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__download_file_content', {
-        fileId: SHEET_ID, exportMimeType: 'text/csv'
-      });
-      if (result?.isError) throw new Error(result.content?.[0]?.text || 'MCP error');
-      const toolText = (result?.content?.[0]?.text) || (typeof result === 'string' ? result : JSON.stringify(result));
-      let b64 = null;
-      try { const parsed = JSON.parse(toolText); b64 = parsed?.content || parsed?.fileContent || null; }
-      catch(e2) { b64 = toolText; }
-      if (!b64) throw new Error('No se pudo extraer contenido del Sheet');
-      csvText = decodeBase64UTF8(b64.replace(/\s/g,''));
-    } else {
-      // ── GitHub Pages / Chrome: leer via URL pública del Sheet ──
-      const res = await fetch(SHEET_PUBLIC_CSV);
-      if (!res.ok) throw new Error(`HTTP ${res.status} — ¿El Sheet es público? (Compartir → "Cualquiera con el link")`);
-      csvText = await res.text();
-    }
-
-    parseTallyContent(csvText);
-  } catch (e) {
-    document.getElementById('tally-rows-container').innerHTML =
-      '<div style="color:var(--red);padding:12px">❌ Error: ' + (e.message || e) + '</div>';
-  }
-}
-
-// Custom base64 decoder — avoids atob() DOMException issues
-function decodeBase64UTF8(b64) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-  const clean = b64.replace(/[^A-Za-z0-9+/=]/g, '');
-  const bytes = [];
-  for (let i = 0; i < clean.length; i += 4) {
-    const a = chars.indexOf(clean[i]);
-    const b = chars.indexOf(clean[i+1]);
-    const c = clean[i+2] === '=' ? 0 : chars.indexOf(clean[i+2]);
-    const d = clean[i+3] === '=' ? 0 : chars.indexOf(clean[i+3]);
-    bytes.push((a << 2) | (b >> 4));
-    if (clean[i+2] !== '=') bytes.push(((b & 0xF) << 4) | (c >> 2));
-    if (clean[i+3] !== '=') bytes.push(((c & 0x3) << 6) | d);
-  }
-  return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
-}
-
-function parseCSVLine(line) {
-  const result = [];
-  let cur = '', inQuote = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQuote && line[i+1] === '"') { cur += '"'; i++; }
-      else inQuote = !inQuote;
-    } else if (ch === ',' && !inQuote) {
-      result.push(cur.trim()); cur = '';
-    } else { cur += ch; }
-  }
-  result.push(cur.trim());
-  return result;
-}
-
-function parseTallyContent(rawText) {
-  const lines = rawText.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l => l.trim().length > 0);
-  if (lines.length < 2) {
-    document.getElementById('tally-rows-container').innerHTML =
-      '<div style="padding:12px"><div style="color:var(--gray-400)">No hay respuestas en el formulario aún.</div>' +
-      '<details style="margin-top:8px;font-size:11px"><summary>🔍 Debug (primeros 500 chars)</summary>' +
-      '<pre style="background:#f5f5f5;padding:8px;font-size:10px;white-space:pre-wrap;overflow:auto;max-height:200px">' +
-      rawText.substring(0,500).replace(/</g,'&lt;') + '</pre></details></div>';
-    return;
-  }
-  const firstLine = lines[0];
-  const sep = firstLine.includes('\t') ? '\t' : (firstLine.split(',').length > firstLine.split('|').length ? ',' : '|');
-  const headers = (sep === ',' ? parseCSVLine(firstLine) : firstLine.split(sep)).map(h => h.trim().toLowerCase());
-  function findLastIdx(kws) {
-    for (const kw of kws) {
-      const exact = headers.lastIndexOf(kw);
-      if (exact >= 0) return exact;
-      for (let i = headers.length - 1; i >= 0; i--) {
-        if (headers[i].includes(kw)) return i;
+    cols.forEach(function (col, i) {
+      const lbl = (col.label || '').toLowerCase();
+      if (lbl.includes('proyecto')) {
+        PRODUCT_KEYWORDS.forEach(function (p) {
+          if (lbl.includes(p.kw)) prodIdx[p.val] = i;
+        });
       }
+      if (lbl.includes('nombre'))                              idx.nombre  = i;
+      if (lbl === 'email' || lbl.includes('@'))                idx.email   = i;
+      if (lbl.includes('cuit'))                                idx.cuit    = i;
+      if (lbl.includes('cbu') || lbl.includes('alias'))       idx.cbu     = i;
+      if (lbl.includes('submitted') || lbl.includes('fecha')) idx.date    = i;
+      if (lbl === 'factura')                                   idx.factura = i;
+      if (lbl.includes('monto') || lbl.includes('importe'))   idx.monto   = i;
+    });
+
+    if (!Object.keys(prodIdx).length) {
+      prodIdx.live = 8; prodIdx.workshop = 9; prodIdx.curso = 10;
     }
-    return -1;
-  }
-  function findFirstIdx(kws) {
-    for (const kw of kws) {
-      const i = headers.findIndex(h => h === kw || h.includes(kw));
-      if (i >= 0) return i;
+
+    let stored = { invoices: [], nextId: 1 };
+    try { stored = JSON.parse(localStorage.getItem('liq_data_v1')) || stored; } catch (e) {}
+    const alreadyDone = new Set(
+      stored.invoices
+        .filter(function (i) { return i.fromTally; })
+        .map(function (i) { return (i.email + '|' + i.product).toLowerCase(); })
+    );
+
+    function getVal(row, i) {
+      if (i === undefined) return '';
+      const cell = row.c && row.c[i];
+      if (!cell || cell.v == null) return '';
+      if (typeof cell.v === 'boolean') return cell.v;
+      return cell.f !== undefined ? cell.f : cell.v;
     }
-    return -1;
+
+    _rows = [];
+    rows.forEach(function (row, ri) {
+      const nombre = String(getVal(row, idx.nombre) || '').trim();
+      const email  = String(getVal(row, idx.email)  || '').trim().toLowerCase();
+      if (!nombre || !email) return;
+
+      let product = null;
+      var pKeys = Object.keys(prodIdx);
+      for (var pi = 0; pi < pKeys.length; pi++) {
+        var pKey = pKeys[pi];
+        if (getVal(row, prodIdx[pKey])) { product = pKey; break; }
+      }
+      if (!product) return;
+
+      const montoRaw = getVal(row, idx.monto);
+      const monto    = typeof montoRaw === 'number'
+        ? montoRaw
+        : parseFloat(String(montoRaw).replace(/[^\d.]/g, '')) || 0;
+
+      _rows.push({
+        _ri:        ri,
+        nombre:     nombre,
+        email:      email,
+        cuit:       String(getVal(row, idx.cuit)    || '').trim(),
+        cbu:        String(getVal(row, idx.cbu)     || '').trim(),
+        date:       String(getVal(row, idx.date)    || '').trim(),
+        facturaUrl: String(getVal(row, idx.factura) || '').trim(),
+        monto:      monto,
+        product:    product,
+        done:       alreadyDone.has(email + '|' + product)
+      });
+    });
+
+    _renderRows();
   }
-  const nameIdx    = findFirstIdx(['nombre y apellido','contenidista','nombre','name','apellido','full name']);
-  const emailIdx   = findFirstIdx(['email','mail','correo']);
-  const productIdx = findFirstIdx(['proyecto','producto','product','tipo de','servicio','qué creaste','que creaste']);
-  const dateIdx    = findFirstIdx(['submitted at','submitted_at','created at','timestamp','fecha']);
-  const cuitIdx    = findFirstIdx(['cuit']);
-  const cbuIdx     = findFirstIdx(['cbu','alias']);
-  const invoiceIdx = findLastIdx(['link factura','adjunto','comprobante','archivo','file upload','upload','pdf','factura']);
-  const existing = new Set(invoices.map(i => i.email.toLowerCase() + '_' + i.product));
-  tallyPendingRows = [];
-  lines.slice(1).forEach((line, idx) => {
-    const cols = sep === ',' ? parseCSVLine(line) : line.split(sep).map(c => c.trim());
-    if (cols.length < 2) return;
-    const name  = nameIdx >= 0  ? cols[nameIdx]  : '';
-    const email = emailIdx >= 0 ? (cols[emailIdx] || '').replace(/\s/g,'') : '';
-    if (!name && !email) return;
-    const rawProduct = productIdx >= 0 ? cols[productIdx].toLowerCase() : '';
-    let product;
-    if (rawProduct === 'true' || rawProduct === 'false' || rawProduct === '') {
-      const productText = cols.slice(7, 11).find(c => c && c.toUpperCase() !== 'TRUE' && c.toUpperCase() !== 'FALSE' && c.trim() !== '') || '';
-      product = detectProduct(productText.toLowerCase());
-    } else {
-      product = detectProduct(rawProduct);
+
+  function _renderRows() {
+    const container = document.getElementById('tally-rows-container');
+    const emptyEl   = document.getElementById('tally-empty');
+    const importBtn = document.getElementById('import-btn');
+
+    const newRows  = _rows.filter(function (r) { return !r.done; });
+    const doneRows = _rows.filter(function (r) { return r.done; });
+
+    if (!newRows.length && !doneRows.length) {
+      container.innerHTML = '';
+      if (emptyEl)   emptyEl.style.display = '';
+      if (importBtn) importBtn.disabled = true;
+      return;
     }
-    const amount = product ? PRICES[product].amount : 0;
-    const cuit = cuitIdx >= 0 ? cols[cuitIdx] || null : null;
-    const cbu  = cbuIdx >= 0  ? cols[cbuIdx]  || null : null;
-    const invoiceFile = invoiceIdx >= 0 ? cols[invoiceIdx] || null : null;
-    const submittedAt = dateIdx >= 0 ? cols[dateIdx] || null : null;
-    const key = email.toLowerCase() + '_' + product;
-    tallyPendingRows.push({ idx, name, email, product, qty: null, unit: amount, cuit, cbu, invoiceFile, submittedAt, alreadyImported: existing.has(key) });
-  });
-  // ── Filtrar por período seleccionado ──
-  const period = getPeriodLabel();
-  const pParts = period.split(' ');
-  const pMonth = MONTHS_ES[pParts[0]];
-  const pYear  = parseInt(pParts[1]);
-  tallyPendingRows = tallyPendingRows.filter(r => {
-    if (!r.submittedAt) return true; // sin fecha: incluir siempre
-    const d = new Date(r.submittedAt);
-    return (d.getMonth() + 1) === pMonth && d.getFullYear() === pYear;
-  });
 
-  const newRows = tallyPendingRows.filter(r => !r.alreadyImported);
-  if (!newRows.length) {
-    document.getElementById('tally-rows-container').innerHTML =
-      '<div style="padding:12px"><div class="no-errors">✅ No hay respuestas nuevas — todo ya fue importado.</div>' +
-      '<details style="margin-top:8px;font-size:11px;color:var(--gray-400)"><summary>🔍 Debug</summary>' +
-      '<pre style="background:#f5f5f5;padding:8px;font-size:10px;white-space:pre-wrap;overflow:auto;max-height:200px">' +
-      'sep="' + sep + '" | headers (' + headers.length + '):\n' + headers.map((h,i)=>i+':"'+h+'"').join(' | ') +
-      '\nnombre=col'+nameIdx+' email=col'+emailIdx+' producto=col'+productIdx+' cuit=col'+cuitIdx+' cbu=col'+cbuIdx+' factura=col'+invoiceIdx+' fecha=col'+dateIdx+
-      '\nTotal filas: ' + tallyPendingRows.length +
-      (tallyPendingRows[0] ? '\nFila 0: '+JSON.stringify(tallyPendingRows[0]) : '') +
-      '\n\nPrimeros 300 chars del raw:\n' + rawText.substring(0,300).replace(/</g,'&lt;') +
-      '</pre></details></div>';
-    return;
+    var html = '<div style="font-size:12px;color:#888;margin-bottom:10px">' +
+      newRows.length  + ' nueva' + (newRows.length  !== 1 ? 's' : '') + ' · ' +
+      doneRows.length + ' ya importada' + (doneRows.length !== 1 ? 's' : '') +
+    '</div>';
+
+    newRows.forEach(function (r) {
+      html +=
+        '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;' +
+               'border:1px solid #e0e0e0;border-radius:8px;margin-bottom:8px;cursor:pointer;background:#fff;">' +
+          '<input type="checkbox" checked data-ri="' + r._ri + '" style="margin-top:4px;flex-shrink:0;">' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-weight:600;font-size:14px">' + r.nombre + '</div>' +
+            '<div style="font-size:12px;color:#666;margin-top:2px">' +
+              r.email + ' · ' + (PRODUCT_LABELS[r.product] || r.product) +
+              ' · $' + r.monto.toLocaleString('es-AR') +
+            '</div>' +
+            (r.cuit
+              ? '<div style="font-size:11px;color:#aaa;margin-top:2px">CUIT: ' + r.cuit +
+                (r.cbu ? ' · CBU: ' + r.cbu : '') + '</div>'
+              : '') +
+          '</div>' +
+          '<div style="font-size:11px;color:#ccc;flex-shrink:0;padding-top:2px">' + (r.date || '') + '</div>' +
+        '</label>';
+    });
+
+    if (doneRows.length) {
+      html +=
+        '<details style="margin-top:6px">' +
+          '<summary style="font-size:12px;color:#aaa;cursor:pointer">' +
+            doneRows.length + ' ya importada(s) — expandir' +
+          '</summary>';
+      doneRows.forEach(function (r) {
+        html +=
+          '<div style="padding:8px 14px;border:1px solid #eee;border-radius:8px;margin-top:4px;opacity:.55">' +
+            '<span style="font-size:13px;font-weight:600">' + r.nombre + '</span>' +
+            '<span style="font-size:12px;color:#aaa;margin-left:8px">' +
+              (PRODUCT_LABELS[r.product] || r.product) + ' · $' + r.monto.toLocaleString('es-AR') +
+            '</span>' +
+          '</div>';
+      });
+      html += '</details>';
+    }
+
+    container.innerHTML = html;
+    if (emptyEl)   emptyEl.style.display = 'none';
+    if (importBtn) importBtn.disabled = newRows.length === 0;
   }
-  tallyPendingRows = newRows;
-  renderTallyRows();
-}
 
-function detectProduct(str) {
-  if (!str) return 'workshop';
-  if (str.includes('live') || str.includes('sesi')) return 'live';
-  if (str.includes('diplom')) return 'diplomatura';
-  if (str.includes('asistente') || str.includes('contenido') || str.includes('assistant')) return 'asistente';
-  if (str.includes('curs') || str.includes('course')) return 'curso';
-  return 'workshop';
-}
+  window.toggleTallyRow = function (el) {
+    var cb = el.tagName === 'INPUT' ? el : el.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = !cb.checked;
+  };
 
-function parseAmount(str) {
-  if (!str) return null;
-  const n = parseFloat(str.replace(/[^0-9.,]/g,'').replace(',','.'));
-  return isNaN(n) ? null : n;
-}
+  window.importSelected = function () {
+    var checked = document.querySelectorAll('#tally-rows-container input[type="checkbox"]:checked');
+    var selectedRis = new Set(
+      Array.from(checked).map(function (cb) { return parseInt(cb.dataset.ri, 10); })
+    );
 
-function renderTallyRows() {
-  document.getElementById('tally-rows-container').innerHTML = tallyPendingRows.map((r, i) => `
-    <div class="tally-row" id="trow-${i}" onclick="toggleTallyRow(${i})">
-      <div class="tally-check" id="tcheck-${i}"></div>
-      <div class="tally-info">
-        <div class="tally-name">${r.name || '(sin nombre)'}</div>
-        <div class="tally-detail">${r.email || '(sin email)'} · ${PRICES[r.product]?.label || r.product} · Cant: ${r.qty ?? '–'}${r.cuit ? ' · CUIT: '+r.cuit : ''}${r.submittedAt ? ' · 📅 '+formatSubmittedAt(r.submittedAt) : ''}${r.invoiceFile ? ' · 📄 '+(isTallyUrl(r.invoiceFile) ? 'Factura Tally ✓' : r.invoiceFile) : ' · ⚠️ sin factura'}</div>
-      </div>
-      <div class="tally-amount">${fmt(r.unit && r.qty ? r.unit * r.qty : r.unit)}</div>
-    </div>`).join('');
-}
+    var toImport = _rows.filter(function (r) {
+      return selectedRis.has(r._ri) && !r.done;
+    });
+    if (!toImport.length) return;
 
-function toggleTallyRow(i) {
-  if (selectedTallyRows.has(i)) selectedTallyRows.delete(i);
-  else selectedTallyRows.add(i);
-  document.getElementById(`trow-${i}`).classList.toggle('selected', selectedTallyRows.has(i));
-  document.getElementById(`tcheck-${i}`).textContent = selectedTallyRows.has(i) ? '✓' : ' ';
-}
+    var data = { invoices: [], nextId: 1 };
+    try { data = JSON.parse(localStorage.getItem('liq_data_v1')) || data; } catch (e) {}
 
-function importSelected() {
-  if (!selectedTallyRows.size) { showToast('Seleccioná al menos una fila', 'error'); return; }
-  selectedTallyRows.forEach(i => {
-    const r = tallyPendingRows[i];
-    if (!r) return;
-    const isUrl = isTallyUrl(r.invoiceFile);
-    invoices.push({ id: nextId++, name: r.name, email: r.email, product: r.product, unit: r.unit, qty: r.qty, mailStatus: 'pending', driveUrl: isUrl ? r.invoiceFile : null, invoiceFile: isUrl ? null : (r.invoiceFile || null), cuit: r.cuit || null, cbu: r.cbu || null, submittedAt: r.submittedAt || null, fromTally: true });
-  });
-  const count = selectedTallyRows.size;
-  saveToLS();
-  closeTallyModal();
-  renderAll();
-  if (document.getElementById('finance-view').style.display !== 'none') renderFinanceView();
-  showToast(`✅ ${count} factura${count > 1 ? 's' : ''} importada${count > 1 ? 's' : ''} desde Tally`, 'success');
-}
+    var period = (document.getElementById('period-select') || {}).value || '';
+
+    toImport.forEach(function (r) {
+      data.invoices.push({
+        id:          data.nextId++,
+        name:        r.nombre,
+        email:       r.email,
+        product:     r.product,
+        unit:        r.monto,
+        qty:         1,
+        mailStatus:  'no',
+        driveUrl:    r.facturaUrl || '',
+        invoiceFile: r.facturaUrl ? (r.facturaUrl.split('/').pop() || 'factura.pdf') : '',
+        cuit:        r.cuit        || '',
+        cbu:         r.cbu         || '',
+        submittedAt: r.date        || '',
+        fromTally:   true,
+        period:      period
+      });
+    });
+
+    localStorage.setItem('liq_data_v1', JSON.stringify(data));
+
+    if (typeof closeTallyModal === 'function') closeTallyModal();
+
+    if      (typeof renderAll  === 'function') renderAll();
+    else if (typeof loadFromLS === 'function') { loadFromLS(); renderAll && renderAll(); }
+    else location.reload();
+  };
+
+  console.log('[liquidaciones] Tally sync v2 (JSONP) cargado ✓');
+})();
 
 function closeTallyModal() {
   document.getElementById('tally-modal').classList.remove('open');
