@@ -969,7 +969,7 @@ function isTallyUrl(str) {
 
     script.src =
       'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
-      '/gviz/tq?tqx=out:json&callback=' + cbName + '&gid=' + SHEET_GID;
+      '/gviz/tq?tqx=reqId:0;handler:' + cbName + '&gid=' + SHEET_GID;
     document.head.appendChild(script);
   };
 
