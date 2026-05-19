@@ -948,12 +948,18 @@ function isTallyUrl(str) {
     if (importBtn) importBtn.disabled = true;
     container.innerHTML = '<p style="text-align:center;color:#999;padding:28px 16px">⏳ Cargando desde Google Sheets…</p>';
 
-    const cbName = '_tgviz' + Date.now();
-    const script  = document.createElement('script');
+    const script = document.createElement('script');
 
-    window[cbName] = function (resp) {
-      delete window[cbName];
+    // gviz SIEMPRE llama google.visualization.Query.setResponse(data)
+    // → interceptamos esa función antes de cargar el script
+    if (!window.google)                       window.google = {};
+    if (!window.google.visualization)         window.google.visualization = {};
+    if (!window.google.visualization.Query)   window.google.visualization.Query = {};
+
+    window.google.visualization.Query.setResponse = function (resp) {
+      window.google.visualization.Query.setResponse = null;
       if (script.parentNode) script.parentNode.removeChild(script);
+
       if (!resp || !resp.table) {
         container.innerHTML = '<p style="text-align:center;color:#e74c3c;padding:20px">❌ No se recibieron datos.<br><small>Verificá que estás logueada en Google con acceso al Sheet.</small></p>';
         return;
@@ -962,14 +968,15 @@ function isTallyUrl(str) {
     };
 
     script.onerror = function () {
-      delete window[cbName];
+      window.google.visualization.Query.setResponse = null;
       if (script.parentNode) script.parentNode.removeChild(script);
-      container.innerHTML = '<p style="text-align:center;color:#e74c3c;padding:20px">❌ Error de conexión con Google Sheets.</p>';
+      container.innerHTML = '<p style="text-align:center;color:#e74c3c;padding:20px">❌ Error de conexión con Google Sheets.<br><small>Revisá tu conexión a internet.</small></p>';
     };
 
+    // gviz con out:json — usa las cookies de Google del browser, sin API key
     script.src =
       'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
-      '/gviz/tq?tqx=reqId:0;handler:' + cbName + '&gid=' + SHEET_GID;
+      '/gviz/tq?tqx=out:json&gid=' + SHEET_GID;
     document.head.appendChild(script);
   };
 
