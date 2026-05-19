@@ -948,94 +948,79 @@ function isTallyUrl(str) {
     if (importBtn) importBtn.disabled = true;
     container.innerHTML = '<p style="text-align:center;color:#999;padding:28px 16px">⏳ Cargando desde Google Sheets…</p>';
 
-    const script = document.createElement('script');
+    const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyHHBN2vfNGkM3uMFVlLlvxc6-EgBmfup01OQOeGzh9Fyvaa2J7C5A-h-pfPOLjLpvJ3A/exec';
 
-    // gviz SIEMPRE llama google.visualization.Query.setResponse(data)
-    // → interceptamos esa función antes de cargar el script
-    if (!window.google)                       window.google = {};
-    if (!window.google.visualization)         window.google.visualization = {};
-    if (!window.google.visualization.Query)   window.google.visualization.Query = {};
-
-    window.google.visualization.Query.setResponse = function (resp) {
-      window.google.visualization.Query.setResponse = null;
-      if (script.parentNode) script.parentNode.removeChild(script);
-
-      if (!resp || !resp.table) {
-        container.innerHTML = '<p style="text-align:center;color:#e74c3c;padding:20px">❌ No se recibieron datos.<br><small>Verificá que estás logueada en Google con acceso al Sheet.</small></p>';
-        return;
-      }
-      _buildRows(resp.table.cols || [], resp.table.rows || []);
-    };
-
-    script.onerror = function () {
-      window.google.visualization.Query.setResponse = null;
-      if (script.parentNode) script.parentNode.removeChild(script);
-      container.innerHTML = '<p style="text-align:center;color:#e74c3c;padding:20px">❌ Error de conexión con Google Sheets.<br><small>Revisá tu conexión a internet.</small></p>';
-    };
-
-    // gviz con out:json — usa las cookies de Google del browser, sin API key
-    script.src =
-      'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
-      '/gviz/tq?tqx=out:json&gid=' + SHEET_GID;
-    document.head.appendChild(script);
+    fetch(PROXY_URL)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || !data.rows) throw new Error('sin datos');
+        _buildRows(data.headers, data.rows);
+      })
+      .catch(function (err) {
+        container.innerHTML = '<p style="text-align:center;color:#e74c3c;padding:20px">❌ Error al conectar con el Sheet.<br><small>' + err.message + '</small></p>';
+      });
   };
 
-  function _buildRows(cols, rows) {
-    const idx = { nombre: 3, email: 4, cuit: 5, cbu: 6, date: 2, factura: 11, monto: 12 };
-    const prodIdx = {};
+  // ─────────────────────────────────────────────────
+  //  PARSEAR RESPUESTA DEL PROXY → _rows
+  // ─────────────────────────────────────────────────
+  function _buildRows(headers, proxyRows) {
+    var idx = { nombre: 3, email: 4, cuit: 5, cbu: 6, date: 2, factura: 11, monto: 12 };
+    var prodIdx = {};
 
-    cols.forEach(function (col, i) {
-      const lbl = (col.label || '').toLowerCase();
-      if (lbl.includes('proyecto')) {
-        PRODUCT_KEYWORDS.forEach(function (p) {
-          if (lbl.includes(p.kw)) prodIdx[p.val] = i;
-        });
-      }
-      if (lbl.includes('nombre'))                              idx.nombre  = i;
-      if (lbl === 'email' || lbl.includes('@'))                idx.email   = i;
-      if (lbl.includes('cuit'))                                idx.cuit    = i;
-      if (lbl.includes('cbu') || lbl.includes('alias'))       idx.cbu     = i;
-      if (lbl.includes('submitted') || lbl.includes('fecha')) idx.date    = i;
-      if (lbl === 'factura')                                   idx.factura = i;
-      if (lbl.includes('monto') || lbl.includes('importe'))   idx.monto   = i;
+    headers.forEach(function (h, i) {
+      var lbl = (h || '').toLowerCase();
+      if (lbl.includes('nombre'))                                 idx.nombre  = i;
+      if (lbl === 'email' || lbl.includes('correo'))              idx.email   = i;
+      if (lbl.includes('cuit'))                                   idx.cuit    = i;
+      if (lbl.includes('cbu') || lbl.includes('alias'))          idx.cbu     = i;
+      if (lbl.includes('submitted') || lbl.includes('fecha') ||
+          lbl.includes('marca'))                                  idx.date    = i;
+      if (lbl === 'factura' || lbl.includes('comprobante'))       idx.factura = i;
+      if (lbl.includes('monto') || lbl.includes('importe'))      idx.monto   = i;
+      PRODUCT_KEYWORDS.forEach(function (p) {
+        if (lbl.includes(p.kw)) prodIdx[p.val] = i;
+      });
     });
 
     if (!Object.keys(prodIdx).length) {
       prodIdx.live = 8; prodIdx.workshop = 9; prodIdx.curso = 10;
     }
 
-    let stored = { invoices: [], nextId: 1 };
+    var stored = { invoices: [], nextId: 1 };
     try { stored = JSON.parse(localStorage.getItem('liq_data_v1')) || stored; } catch (e) {}
-    const alreadyDone = new Set(
+    var alreadyDone = new Set(
       stored.invoices
         .filter(function (i) { return i.fromTally; })
         .map(function (i) { return (i.email + '|' + i.product).toLowerCase(); })
     );
 
     function getVal(row, i) {
-      if (i === undefined) return '';
-      const cell = row.c && row.c[i];
-      if (!cell || cell.v == null) return '';
-      if (typeof cell.v === 'boolean') return cell.v;
-      return cell.f !== undefined ? cell.f : cell.v;
+      if (i < 0 || i === undefined) return '';
+      var v = row[headers[i]];
+      if (v === null || v === undefined) return '';
+      if (typeof v === 'boolean') return v;
+      return String(v).trim();
     }
 
     _rows = [];
-    rows.forEach(function (row, ri) {
-      const nombre = String(getVal(row, idx.nombre) || '').trim();
-      const email  = String(getVal(row, idx.email)  || '').trim().toLowerCase();
+    proxyRows.forEach(function (row, ri) {
+      var nombre = String(getVal(row, idx.nombre) || '').trim();
+      var email  = String(getVal(row, idx.email)  || '').trim().toLowerCase();
       if (!nombre || !email) return;
 
-      let product = null;
+      var product = null;
       var pKeys = Object.keys(prodIdx);
       for (var pi = 0; pi < pKeys.length; pi++) {
-        var pKey = pKeys[pi];
-        if (getVal(row, prodIdx[pKey])) { product = pKey; break; }
+        var val = getVal(row, prodIdx[pKeys[pi]]);
+        if (val && val !== 'false' && val !== '' && val !== '0') {
+          product = pKeys[pi]; break;
+        }
       }
       if (!product) return;
 
-      const montoRaw = getVal(row, idx.monto);
-      const monto    = typeof montoRaw === 'number'
+      var montoRaw = getVal(row, idx.monto);
+      var monto = typeof montoRaw === 'number'
         ? montoRaw
         : parseFloat(String(montoRaw).replace(/[^\d.]/g, '')) || 0;
 
@@ -1056,7 +1041,7 @@ function isTallyUrl(str) {
     _renderRows();
   }
 
-  function _renderRows() {
+    function _renderRows() {
     const container = document.getElementById('tally-rows-container');
     const emptyEl   = document.getElementById('tally-empty');
     const importBtn = document.getElementById('import-btn');
