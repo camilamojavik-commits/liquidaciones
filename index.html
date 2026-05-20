@@ -664,7 +664,7 @@ function renderAlerts() {
 
 function renderTable() {
   const q = searchQuery.toLowerCase(), pf = productFilter;
-  const visible = opsInvoices().filter(inv => {
+  const visible = invoices.filter(inv => {
     const mQ = !q || inv.name.toLowerCase().includes(q) || inv.email.toLowerCase().includes(q);
     const mP = !pf || inv.product === pf;
     return mQ && mP;
@@ -732,7 +732,7 @@ function renderFinanceView() {
   const period = getPeriodLabel();
   document.getElementById('finance-period').textContent = period;
   document.getElementById('finance-date').textContent = new Date().toLocaleDateString('es-AR', {day:'2-digit',month:'long',year:'numeric'});
-  const tally = opsInvoices();
+  const tally = tallyInvoices();
   const grandTotal = tally.reduce((s, inv) => s + total(inv), 0);
   document.getElementById('fin-summary').innerHTML = `
     <div class="fin-stat"><div class="lbl">Total a pagar</div><div class="val">${fmt(grandTotal)}</div></div>
