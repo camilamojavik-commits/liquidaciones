@@ -944,6 +944,16 @@ function isTallyUrl(str) {
  * Copiar TODO este bloque y pegarlo en index.html, justo ANTES del </body>
  * (reemplaza cualquier bloque anterior de openTallySync)
  */
+/**
+ * TALLY SYNC PATCH v3 — liquidaciones
+ * =====================================
+ * Usa fetch() directo al endpoint público gviz de Google Sheets.
+ * Requiere que el Sheet esté compartido como "cualquiera con el link puede ver".
+ *
+ * CÓMO INTEGRAR:
+ * Copiar TODO este bloque y pegarlo en index.html, justo ANTES del </body>
+ * (reemplaza cualquier bloque anterior de openTallySync)
+ */
 (function patchTallySync() {
   const SHEET_ID  = '1gQNCLK0fw8VndKAEvOhCW7w4J-Sou4du6pPfeIchSVc';
   const SHEET_GID = '347249851';
@@ -1217,8 +1227,8 @@ function isTallyUrl(str) {
 
     if (typeof closeTallyModal === 'function') closeTallyModal();
 
-    if      (typeof renderAll  === 'function') renderAll();
-    else if (typeof loadFromLS === 'function') { loadFromLS(); renderAll && renderAll(); }
+    if (typeof loadFromLS === 'function') loadFromLS();
+    if (typeof renderAll  === 'function') renderAll();
     else location.reload();
   };
 
