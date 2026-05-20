@@ -914,29 +914,46 @@ function isTallyUrl(str) {
   return str && (str.startsWith('http://') || str.startsWith('https://'));
 }
 
-// ─── TALLY SYNC v2 (JSONP) ─────────────────────────────────────────────
+/**
+ * TALLY SYNC PATCH v3 â liquidaciones
+ * =====================================
+ * Usa fetch() directo al endpoint pÃºblico gviz de Google Sheets.
+ * Requiere que el Sheet estÃ© compartido como "cualquiera con el link puede ver".
+ *
+ * CÃMO INTEGRAR:
+ * Copiar TODO este bloque y pegarlo en index.html, justo ANTES del </body>
+ * (reemplaza cualquier bloque anterior de openTallySync)
+ */
 (function patchTallySync() {
-  const SHEET_ID = '1gQNCLK0fw8VndKAEvOhCW7w4J-Sou4du6pPfeIchSVc';
+  const SHEET_ID  = '1gQNCLK0fw8VndKAEvOhCW7w4J-Sou4du6pPfeIchSVc';
   const SHEET_GID = '347249851';
+  const GVIZ_URL  =
+    'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
+    '/gviz/tq?tqx=out:json&gid=' + SHEET_GID;
 
   const PRODUCT_KEYWORDS = [
     { kw: 'live session', val: 'live'        },
+    { kw: 'live',         val: 'live'        },
     { kw: 'workshop',     val: 'workshop'    },
     { kw: 'creaci',       val: 'curso'       },
+    { kw: 'curso',        val: 'curso'       },
     { kw: 'diplomatura',  val: 'diplomatura' },
     { kw: 'asistente',    val: 'asistente'   }
   ];
 
   const PRODUCT_LABELS = {
-    workshop:    'Creación de Workshop',
-    curso:       'Creación de Curso',
     live:        'Live Sessions',
+    workshop:    'CreaciÃ³n de Workshop',
+    curso:       'CreaciÃ³n de Curso',
     diplomatura: 'Diplomatura',
     asistente:   'Asistente de Contenido'
   };
 
   let _rows = [];
 
+  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  //  ABRIR MODAL Y CARGAR DATOS
+  // âââââââââââââââââââââââââââââââââââââââââââââââââ
   window.openTallySync = function () {
     const modal     = document.getElementById('tally-modal');
     const container = document.getElementById('tally-rows-container');
@@ -946,53 +963,59 @@ function isTallyUrl(str) {
     modal.style.display = 'flex';
     if (emptyEl)   emptyEl.style.display = 'none';
     if (importBtn) importBtn.disabled = true;
-    container.innerHTML = '<p style="text-align:center;color:#999;padding:28px 16px">⏳ Cargando desde Google Sheets…</p>';
+    container.innerHTML =
+      '<p style="text-align:center;color:#999;padding:28px 16px">â³ Cargando desde Google Sheetsâ¦</p>';
 
-    const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyHHBN2vfNGkM3uMFVlLlvxc6-EgBmfup01OQOeGzh9Fyvaa2J7C5A-h-pfPOLjLpvJ3A/exec';
-
-    // JSONP para evitar CORS en el redirect de Apps Script
-    const cbName = '_proxy' + Date.now();
-    const script = document.createElement('script');
-
-    window[cbName] = function (data) {
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-      if (!data || !data.rows) {
-        container.innerHTML = '<p style="text-align:center;color:#e74c3c;padding:20px">❌ No se recibieron datos del Sheet.</p>';
-        return;
-      }
-      _buildRows(data.headers, data.rows);
-    };
-
-    script.onerror = function () {
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-      container.innerHTML = '<p style="text-align:center;color:#e74c3c;padding:20px">❌ Error al conectar con el Sheet.</p>';
-    };
-
-    script.src = PROXY_URL + '?callback=' + cbName;
-    document.head.appendChild(script);
+    fetch(GVIZ_URL)
+      .then(function (r) { return r.text(); })
+      .then(function (t) {
+        // gviz devuelve: /*O_o*/\ngoogle.visualization.Query.setResponse({...});
+        var start = t.indexOf('(') + 1;
+        var end   = t.lastIndexOf(')');
+        var json  = JSON.parse(t.slice(start, end));
+        if (!json || !json.table) throw new Error('Sin tabla');
+        _buildRows(json.table.cols || [], json.table.rows || []);
+      })
+      .catch(function (e) {
+        container.innerHTML =
+          '<p style="text-align:center;color:#e74c3c;padding:20px">' +
+          'â No se pudo cargar el Sheet.<br>' +
+          '<small>VerificÃ¡ que el Sheet estÃ© compartido como pÃºblico (solo lectura).</small></p>';
+      });
   };
 
-  // ─────────────────────────────────────────────────
-  //  PARSEAR RESPUESTA DEL PROXY → _rows
-  // ─────────────────────────────────────────────────
-  function _buildRows(headers, proxyRows) {
-    var idx = { nombre: 3, email: 4, cuit: 5, cbu: 6, date: 2, factura: 11, monto: 12 };
+  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  //  PARSEAR RESPUESTA GVIZ â _rows
+  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  function _detectProduct(text) {
+    if (!text) return null;
+    var t = String(text).toLowerCase();
+    for (var i = 0; i < PRODUCT_KEYWORDS.length; i++) {
+      if (t.indexOf(PRODUCT_KEYWORDS[i].kw) !== -1) return PRODUCT_KEYWORDS[i].val;
+    }
+    return null;
+  }
+
+  function _buildRows(cols, rows) {
+    var idx = { submissionId: 0, nombre: 3, email: 4, cuit: 5, cbu: 6,
+                date: 2, factura: 11, monto: 12, proyecto: -1 };
     var prodIdx = {};
 
-    headers.forEach(function (h, i) {
-      var lbl = (h || '').toLowerCase();
-      if (lbl.includes('nombre'))                                 idx.nombre  = i;
-      if (lbl === 'email' || lbl.includes('correo'))              idx.email   = i;
-      if (lbl.includes('cuit'))                                   idx.cuit    = i;
-      if (lbl.includes('cbu') || lbl.includes('alias'))          idx.cbu     = i;
-      if (lbl.includes('submitted') || lbl.includes('fecha') ||
-          lbl.includes('marca'))                                  idx.date    = i;
-      if (lbl === 'factura' || lbl.includes('comprobante'))       idx.factura = i;
-      if (lbl.includes('monto') || lbl.includes('importe'))      idx.monto   = i;
+    cols.forEach(function (col, i) {
+      var lbl = (col.label || '').toLowerCase();
+      if (lbl.includes('submission'))                          idx.submissionId = i;
+      if (lbl.includes('nombre'))                              idx.nombre       = i;
+      if (lbl === 'email' || lbl.includes('correo'))          idx.email        = i;
+      if (lbl.includes('cuit'))                                idx.cuit         = i;
+      if (lbl.includes('cbu') || lbl.includes('alias'))       idx.cbu          = i;
+      if (lbl.includes('submitted') || lbl.includes('fecha')) idx.date         = i;
+      if (lbl === 'factura' || lbl.includes('comprobante'))   idx.factura      = i;
+      if (lbl.includes('monto') || lbl.includes('importe'))   idx.monto        = i;
+      // Columna padre del proyecto (texto libre, sin parÃ©ntesis de sub-opciÃ³n)
+      if (lbl.includes('proyecto') && lbl.indexOf('(') === -1) idx.proyecto    = i;
+      // Sub-columnas checkbox de producto
       PRODUCT_KEYWORDS.forEach(function (p) {
-        if (lbl.includes(p.kw)) prodIdx[p.val] = i;
+        if (lbl.includes(p.kw) && prodIdx[p.val] === undefined) prodIdx[p.val] = i;
       });
     });
 
@@ -1000,67 +1023,81 @@ function isTallyUrl(str) {
       prodIdx.live = 8; prodIdx.workshop = 9; prodIdx.curso = 10;
     }
 
+    // IDs ya importados (por submission ID o por email|product|monto)
     var stored = { invoices: [], nextId: 1 };
     try { stored = JSON.parse(localStorage.getItem('liq_data_v1')) || stored; } catch (e) {}
-    var alreadyDone = new Set(
+    var importedIds = new Set(
+      stored.invoices
+        .filter(function (i) { return i.fromTally && i.submissionId; })
+        .map(function (i) { return i.submissionId; })
+    );
+    var importedKeys = new Set(
       stored.invoices
         .filter(function (i) { return i.fromTally; })
-        .map(function (i) { return (i.email + '|' + i.product).toLowerCase(); })
+        .map(function (i) { return (i.email + '|' + i.product + '|' + i.unit).toLowerCase(); })
     );
 
     function getVal(row, i) {
       if (i < 0 || i === undefined) return '';
-      var v = row[headers[i]];
-      if (v === null || v === undefined) return '';
-      if (typeof v === 'boolean') return v;
-      return String(v).trim();
+      var cell = row.c && row.c[i];
+      if (!cell || cell.v == null) return '';
+      if (typeof cell.v === 'boolean') return cell.v;
+      return (cell.f !== undefined && cell.f !== null) ? cell.f : cell.v;
     }
 
     _rows = [];
-    proxyRows.forEach(function (row, ri) {
+    rows.forEach(function (row, ri) {
       var nombre = String(getVal(row, idx.nombre) || '').trim();
       var email  = String(getVal(row, idx.email)  || '').trim().toLowerCase();
       if (!nombre || !email) return;
 
+      // Producto: 1) checkboxes, 2) texto del padre, 3) texto en nombre, 4) fallback live
       var product = null;
       var pKeys = Object.keys(prodIdx);
       for (var pi = 0; pi < pKeys.length; pi++) {
-        var val = getVal(row, prodIdx[pKeys[pi]]);
-        if (val && val !== 'false' && val !== '' && val !== '0') {
-          product = pKeys[pi]; break;
-        }
+        if (getVal(row, prodIdx[pKeys[pi]])) { product = pKeys[pi]; break; }
       }
-      if (!product) return;
+      if (!product) product = _detectProduct(getVal(row, idx.proyecto));
+      if (!product) product = _detectProduct(nombre);
+      if (!product) product = 'live';  // fallback
 
       var montoRaw = getVal(row, idx.monto);
-      var monto = typeof montoRaw === 'number'
+      var monto    = typeof montoRaw === 'number'
         ? montoRaw
-        : parseFloat(String(montoRaw).replace(/[^\d.]/g, '')) || 0;
+        : (parseFloat(String(montoRaw).replace(/\./g, '').replace(',', '.')) || 0);
+
+      var submissionId = String(getVal(row, idx.submissionId) || '').trim();
+      var dedupKey     = (email + '|' + product + '|' + monto).toLowerCase();
+      var done = (submissionId && importedIds.has(submissionId)) || importedKeys.has(dedupKey);
 
       _rows.push({
-        _ri:        ri,
-        nombre:     nombre,
-        email:      email,
-        cuit:       String(getVal(row, idx.cuit)    || '').trim(),
-        cbu:        String(getVal(row, idx.cbu)     || '').trim(),
-        date:       String(getVal(row, idx.date)    || '').trim(),
-        facturaUrl: String(getVal(row, idx.factura) || '').trim(),
-        monto:      monto,
-        product:    product,
-        done:       alreadyDone.has(email + '|' + product)
+        _ri:          ri,
+        submissionId: submissionId,
+        nombre:       nombre,
+        email:        email,
+        cuit:         String(getVal(row, idx.cuit)    || '').trim(),
+        cbu:          String(getVal(row, idx.cbu)     || '').trim(),
+        date:         String(getVal(row, idx.date)    || '').trim(),
+        facturaUrl:   String(getVal(row, idx.factura) || '').trim(),
+        monto:        monto,
+        product:      product,
+        done:         done
       });
     });
 
     _renderRows();
   }
 
-    function _renderRows() {
-    const container = document.getElementById('tally-rows-container');
-    const emptyEl   = document.getElementById('tally-empty');
-    const importBtn = document.getElementById('import-btn');
+  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  //  RENDERIZAR FILAS EN EL MODAL
+  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  function _renderRows() {
+    var container = document.getElementById('tally-rows-container');
+    var emptyEl   = document.getElementById('tally-empty');
+    var importBtn = document.getElementById('import-btn');
 
-    const newRows  = _rows.filter(function (r) { return !r.done; });
-    const doneRows = _rows.filter(function (r) { return r.done; });
+    var newRows  = _rows.filter(function (r) { return !r.done; });
+    var doneRows = _rows.filter(function (r) { return r.done; });
 
     if (!newRows.length && !doneRows.length) {
       container.innerHTML = '';
@@ -1070,7 +1107,7 @@ function isTallyUrl(str) {
     }
 
     var html = '<div style="font-size:12px;color:#888;margin-bottom:10px">' +
-      newRows.length  + ' nueva' + (newRows.length  !== 1 ? 's' : '') + ' · ' +
+      newRows.length  + ' nueva' + (newRows.length  !== 1 ? 's' : '') + ' Â· ' +
       doneRows.length + ' ya importada' + (doneRows.length !== 1 ? 's' : '') +
     '</div>';
 
@@ -1082,12 +1119,12 @@ function isTallyUrl(str) {
           '<div style="flex:1;min-width:0">' +
             '<div style="font-weight:600;font-size:14px">' + r.nombre + '</div>' +
             '<div style="font-size:12px;color:#666;margin-top:2px">' +
-              r.email + ' · ' + (PRODUCT_LABELS[r.product] || r.product) +
-              ' · $' + r.monto.toLocaleString('es-AR') +
+              r.email + ' Â· ' + (PRODUCT_LABELS[r.product] || r.product) +
+              ' Â· $' + r.monto.toLocaleString('es-AR') +
             '</div>' +
             (r.cuit
               ? '<div style="font-size:11px;color:#aaa;margin-top:2px">CUIT: ' + r.cuit +
-                (r.cbu ? ' · CBU: ' + r.cbu : '') + '</div>'
+                (r.cbu ? ' Â· CBU: ' + r.cbu : '') + '</div>'
               : '') +
           '</div>' +
           '<div style="font-size:11px;color:#ccc;flex-shrink:0;padding-top:2px">' + (r.date || '') + '</div>' +
@@ -1098,14 +1135,14 @@ function isTallyUrl(str) {
       html +=
         '<details style="margin-top:6px">' +
           '<summary style="font-size:12px;color:#aaa;cursor:pointer">' +
-            doneRows.length + ' ya importada(s) — expandir' +
+            doneRows.length + ' ya importada(s) â expandir' +
           '</summary>';
       doneRows.forEach(function (r) {
         html +=
           '<div style="padding:8px 14px;border:1px solid #eee;border-radius:8px;margin-top:4px;opacity:.55">' +
             '<span style="font-size:13px;font-weight:600">' + r.nombre + '</span>' +
             '<span style="font-size:12px;color:#aaa;margin-left:8px">' +
-              (PRODUCT_LABELS[r.product] || r.product) + ' · $' + r.monto.toLocaleString('es-AR') +
+              (PRODUCT_LABELS[r.product] || r.product) + ' Â· $' + r.monto.toLocaleString('es-AR') +
             '</span>' +
           '</div>';
       });
@@ -1117,11 +1154,9 @@ function isTallyUrl(str) {
     if (importBtn) importBtn.disabled = newRows.length === 0;
   }
 
-  window.toggleTallyRow = function (el) {
-    var cb = el.tagName === 'INPUT' ? el : el.querySelector('input[type="checkbox"]');
-    if (cb) cb.checked = !cb.checked;
-  };
-
+  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  //  IMPORTAR SELECCIONADAS
+  // âââââââââââââââââââââââââââââââââââââââââââââââââ
   window.importSelected = function () {
     var checked = document.querySelectorAll('#tally-rows-container input[type="checkbox"]:checked');
     var selectedRis = new Set(
@@ -1140,20 +1175,21 @@ function isTallyUrl(str) {
 
     toImport.forEach(function (r) {
       data.invoices.push({
-        id:          data.nextId++,
-        name:        r.nombre,
-        email:       r.email,
-        product:     r.product,
-        unit:        r.monto,
-        qty:         1,
-        mailStatus:  'no',
-        driveUrl:    r.facturaUrl || '',
-        invoiceFile: r.facturaUrl ? (r.facturaUrl.split('/').pop() || 'factura.pdf') : '',
-        cuit:        r.cuit        || '',
-        cbu:         r.cbu         || '',
-        submittedAt: r.date        || '',
-        fromTally:   true,
-        period:      period
+        id:           data.nextId++,
+        submissionId: r.submissionId || '',
+        name:         r.nombre,
+        email:        r.email,
+        product:      r.product,
+        unit:         r.monto,
+        qty:          1,
+        mailStatus:   'no',
+        driveUrl:     r.facturaUrl || '',
+        invoiceFile:  r.facturaUrl ? (r.facturaUrl.split('/').pop() || 'factura.pdf') : '',
+        cuit:         r.cuit        || '',
+        cbu:          r.cbu         || '',
+        submittedAt:  r.date        || '',
+        fromTally:    true,
+        period:       period
       });
     });
 
@@ -1166,9 +1202,8 @@ function isTallyUrl(str) {
     else location.reload();
   };
 
-  console.log('[liquidaciones] Tally sync v2 (JSONP) cargado ✓');
+  console.log('[liquidaciones] Tally sync patch v3 cargado â');
 })();
-
 function closeTallyModal() {
   document.getElementById('tally-modal').classList.remove('open');
   selectedTallyRows.clear();
