@@ -924,6 +924,16 @@ function isTallyUrl(str) {
  * Copiar TODO este bloque y pegarlo en index.html, justo ANTES del </body>
  * (reemplaza cualquier bloque anterior de openTallySync)
  */
+/**
+ * TALLY SYNC PATCH v3 — liquidaciones
+ * =====================================
+ * Usa fetch() directo al endpoint público gviz de Google Sheets.
+ * Requiere que el Sheet esté compartido como "cualquiera con el link puede ver".
+ *
+ * CÓMO INTEGRAR:
+ * Copiar TODO este bloque y pegarlo en index.html, justo ANTES del </body>
+ * (reemplaza cualquier bloque anterior de openTallySync)
+ */
 (function patchTallySync() {
   const SHEET_ID  = '1gQNCLK0fw8VndKAEvOhCW7w4J-Sou4du6pPfeIchSVc';
   const SHEET_GID = '347249851';
@@ -943,17 +953,17 @@ function isTallyUrl(str) {
 
   const PRODUCT_LABELS = {
     live:        'Live Sessions',
-    workshop:    'CreaciÃ³n de Workshop',
-    curso:       'CreaciÃ³n de Curso',
+    workshop:    'Creación de Workshop',
+    curso:       'Creación de Curso',
     diplomatura: 'Diplomatura',
     asistente:   'Asistente de Contenido'
   };
 
   let _rows = [];
 
-  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─────────────────────────────────────────────────
   //  ABRIR MODAL Y CARGAR DATOS
-  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─────────────────────────────────────────────────
   window.openTallySync = function () {
     const modal     = document.getElementById('tally-modal');
     const container = document.getElementById('tally-rows-container');
@@ -964,7 +974,7 @@ function isTallyUrl(str) {
     if (emptyEl)   emptyEl.style.display = 'none';
     if (importBtn) importBtn.disabled = true;
     container.innerHTML =
-      '<p style="text-align:center;color:#999;padding:28px 16px">â³ Cargando desde Google Sheetsâ¦</p>';
+      '<p style="text-align:center;color:#999;padding:28px 16px">⏳ Cargando desde Google Sheets…</p>';
 
     fetch(GVIZ_URL)
       .then(function (r) { return r.text(); })
@@ -979,14 +989,14 @@ function isTallyUrl(str) {
       .catch(function (e) {
         container.innerHTML =
           '<p style="text-align:center;color:#e74c3c;padding:20px">' +
-          'â No se pudo cargar el Sheet.<br>' +
-          '<small>VerificÃ¡ que el Sheet estÃ© compartido como pÃºblico (solo lectura).</small></p>';
+          '❌ No se pudo cargar el Sheet.<br>' +
+          '<small>Verificá que el Sheet esté compartido como público (solo lectura).</small></p>';
       });
   };
 
-  // âââââââââââââââââââââââââââââââââââââââââââââââââ
-  //  PARSEAR RESPUESTA GVIZ â _rows
-  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─────────────────────────────────────────────────
+  //  PARSEAR RESPUESTA GVIZ → _rows
+  // ─────────────────────────────────────────────────
   function _detectProduct(text) {
     if (!text) return null;
     var t = String(text).toLowerCase();
@@ -1011,7 +1021,7 @@ function isTallyUrl(str) {
       if (lbl.includes('submitted') || lbl.includes('fecha')) idx.date         = i;
       if (lbl === 'factura' || lbl.includes('comprobante'))   idx.factura      = i;
       if (lbl.includes('monto') || lbl.includes('importe'))   idx.monto        = i;
-      // Columna padre del proyecto (texto libre, sin parÃ©ntesis de sub-opciÃ³n)
+      // Columna padre del proyecto (texto libre, sin paréntesis de sub-opción)
       if (lbl.includes('proyecto') && lbl.indexOf('(') === -1) idx.proyecto    = i;
       // Sub-columnas checkbox de producto
       PRODUCT_KEYWORDS.forEach(function (p) {
@@ -1088,9 +1098,9 @@ function isTallyUrl(str) {
     _renderRows();
   }
 
-  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─────────────────────────────────────────────────
   //  RENDERIZAR FILAS EN EL MODAL
-  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─────────────────────────────────────────────────
   function _renderRows() {
     var container = document.getElementById('tally-rows-container');
     var emptyEl   = document.getElementById('tally-empty');
@@ -1107,7 +1117,7 @@ function isTallyUrl(str) {
     }
 
     var html = '<div style="font-size:12px;color:#888;margin-bottom:10px">' +
-      newRows.length  + ' nueva' + (newRows.length  !== 1 ? 's' : '') + ' Â· ' +
+      newRows.length  + ' nueva' + (newRows.length  !== 1 ? 's' : '') + ' \u00B7 ' +
       doneRows.length + ' ya importada' + (doneRows.length !== 1 ? 's' : '') +
     '</div>';
 
@@ -1119,12 +1129,12 @@ function isTallyUrl(str) {
           '<div style="flex:1;min-width:0">' +
             '<div style="font-weight:600;font-size:14px">' + r.nombre + '</div>' +
             '<div style="font-size:12px;color:#666;margin-top:2px">' +
-              r.email + ' Â· ' + (PRODUCT_LABELS[r.product] || r.product) +
-              ' Â· $' + r.monto.toLocaleString('es-AR') +
+              r.email + ' \u00B7 ' + (PRODUCT_LABELS[r.product] || r.product) +
+              ' \u00B7 $' + r.monto.toLocaleString('es-AR') +
             '</div>' +
             (r.cuit
               ? '<div style="font-size:11px;color:#aaa;margin-top:2px">CUIT: ' + r.cuit +
-                (r.cbu ? ' Â· CBU: ' + r.cbu : '') + '</div>'
+                (r.cbu ? ' \u00B7 CBU: ' + r.cbu : '') + '</div>'
               : '') +
           '</div>' +
           '<div style="font-size:11px;color:#ccc;flex-shrink:0;padding-top:2px">' + (r.date || '') + '</div>' +
@@ -1135,14 +1145,14 @@ function isTallyUrl(str) {
       html +=
         '<details style="margin-top:6px">' +
           '<summary style="font-size:12px;color:#aaa;cursor:pointer">' +
-            doneRows.length + ' ya importada(s) â expandir' +
+            doneRows.length + ' ya importada(s) — expandir' +
           '</summary>';
       doneRows.forEach(function (r) {
         html +=
           '<div style="padding:8px 14px;border:1px solid #eee;border-radius:8px;margin-top:4px;opacity:.55">' +
             '<span style="font-size:13px;font-weight:600">' + r.nombre + '</span>' +
             '<span style="font-size:12px;color:#aaa;margin-left:8px">' +
-              (PRODUCT_LABELS[r.product] || r.product) + ' Â· $' + r.monto.toLocaleString('es-AR') +
+              (PRODUCT_LABELS[r.product] || r.product) + ' \u00B7 $' + r.monto.toLocaleString('es-AR') +
             '</span>' +
           '</div>';
       });
@@ -1154,9 +1164,9 @@ function isTallyUrl(str) {
     if (importBtn) importBtn.disabled = newRows.length === 0;
   }
 
-  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─────────────────────────────────────────────────
   //  IMPORTAR SELECCIONADAS
-  // âââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─────────────────────────────────────────────────
   window.importSelected = function () {
     var checked = document.querySelectorAll('#tally-rows-container input[type="checkbox"]:checked');
     var selectedRis = new Set(
@@ -1202,7 +1212,7 @@ function isTallyUrl(str) {
     else location.reload();
   };
 
-  console.log('[liquidaciones] Tally sync patch v3 cargado â');
+  console.log('[liquidaciones] Tally sync patch v3 cargado ✓');
 })();
 function closeTallyModal() {
   document.getElementById('tally-modal').classList.remove('open');
