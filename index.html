@@ -575,14 +575,25 @@ const isCowork = () => !!window.cowork?.callMcpTool;
 // ─── PERSISTENCIA LOCAL ───────────────────────────────────────────────────
 const LS_KEY = 'liq_data_v1';
 function saveToLS() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ invoices, nextId })); } catch(e) {}
+  try {
+    const prices = {};
+    Object.entries(PRICES).forEach(([k, p]) => { prices[k] = p.amount; });
+    localStorage.setItem(LS_KEY, JSON.stringify({ invoices, nextId, prices }));
+  } catch(e) {}
 }
 function loadFromLS() {
   try {
     const d = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
-    if (d && Array.isArray(d.invoices) && d.invoices.length) {
-      invoices = d.invoices;
-      if (d.nextId) nextId = d.nextId;
+    if (d) {
+      if (Array.isArray(d.invoices)) {
+        invoices = d.invoices;
+        if (d.nextId) nextId = d.nextId;
+      }
+      if (d.prices) {
+        Object.entries(d.prices).forEach(([k, amount]) => {
+          if (PRICES[k]) PRICES[k].amount = amount;
+        });
+      }
       return true;
     }
   } catch(e) {}
@@ -1276,6 +1287,7 @@ function editPrice(k) {
   const n = parseFloat(v.replace(/[^0-9.,]/g,'').replace(',','.'));
   if (isNaN(n) || n <= 0) { alert('Ingresá un monto válido.'); return; }
   PRICES[k].amount = n;
+  saveToLS();
   renderAll();
 }
 
