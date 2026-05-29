@@ -548,7 +548,7 @@ const MONTHS_ES = { 'Enero':1,'Febrero':2,'Marzo':3,'Abril':4,'Mayo':5,'Junio':6
 
 const PRICES = {
   workshop:   { label:'Creación de Workshop',    amount:50000,  color:'#15803D', bg:'#DCFCE7' },
-  curso:      { label:'Creación de Curso',       amount:80000,  color:'#A16207', bg:'#FEF9C3' },
+  curso:      { label:'Creación de Curso',       amount:150000,  color:'#A16207', bg:'#FEF9C3' },
   live:       { label:'Live Sessions',           amount:400000, color:'#7C3AED', bg:'#EDE9FE' },
   diplomatura:{ label:'Diplomatura',             amount:0,      color:'#0369A1', bg:'#E0F2FE' },
   asistente:  { label:'Asistente de Contenido',  amount:700000, color:'#BE185D', bg:'#FFECF1' }
@@ -686,7 +686,7 @@ function renderAlerts() {
 
 function renderTable() {
   const q = searchQuery.toLowerCase(), pf = productFilter;
-  const visible = invoices.filter(inv => {
+  const visible = opsInvoices().filter(inv => {
     const mQ = !q || inv.name.toLowerCase().includes(q) || inv.email.toLowerCase().includes(q);
     const mP = !pf || inv.product === pf;
     return mQ && mP;
@@ -1232,7 +1232,7 @@ function isTallyUrl(str) {
         name:         r.nombre,
         email:        r.email,
         product:      r.product,
-        unit:         r.monto,
+        unit:         r.monto || (PRICES[r.product] ? PRICES[r.product].amount : 0),
         qty:          1,
         mailStatus:   'no',
         driveUrl:     r.facturaUrl || '',
