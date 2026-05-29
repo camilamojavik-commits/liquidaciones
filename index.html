@@ -760,7 +760,7 @@ function renderFinanceView() {
   const period = getPeriodLabel();
   document.getElementById('finance-period').textContent = period;
   document.getElementById('finance-date').textContent = new Date().toLocaleDateString('es-AR', {day:'2-digit',month:'long',year:'numeric'});
-  const tally = invoices.slice(); // Finance: show all entries (ops + tally)
+  const tally = invoices.filter(i => i.driveUrl || i.invoiceFile || i.submittedAt); // Finance: solo los que enviaron factura
   const grandTotal = tally.reduce((s, inv) => s + total(inv), 0);
   document.getElementById('fin-summary').innerHTML = `
     <div class="fin-stat"><div class="lbl">Total a pagar</div><div class="val">${fmt(grandTotal)}</div></div>
