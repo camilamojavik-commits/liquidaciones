@@ -605,6 +605,23 @@ function loadFromLS() {
           inv.unit = PRICES[inv.product].amount;
         }
       });
+      // Migration: sync driveUrl+submittedAt from Tally submissions to Ops entries
+      (function() {
+        var tallyMap = {};
+        invoices.filter(function(i){ return i.fromTally; }).forEach(function(t) {
+          var k = t.email.toLowerCase().trim() + '|' + t.product;
+          if (!tallyMap[k] || t.submittedAt > (tallyMap[k].submittedAt||'')) tallyMap[k] = t;
+        });
+        invoices.filter(function(i){ return !i.fromTally; }).forEach(function(ops) {
+          var k = ops.email.toLowerCase().trim() + '|' + ops.product;
+          var t = tallyMap[k];
+          if (t) {
+            if (t.driveUrl && !ops.driveUrl) ops.driveUrl = t.driveUrl;
+            if (t.invoiceFile && !ops.invoiceFile) ops.invoiceFile = t.invoiceFile;
+            if (t.submittedAt && !ops.submittedAt) ops.submittedAt = t.submittedAt;
+          }
+        });
+      })();
       saveToLS();
       if (d.prices) {
         Object.entries(d.prices).forEach(([k, amount]) => {
