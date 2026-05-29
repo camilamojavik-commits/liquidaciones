@@ -760,7 +760,26 @@ function renderFinanceView() {
   const period = getPeriodLabel();
   document.getElementById('finance-period').textContent = period;
   document.getElementById('finance-date').textContent = new Date().toLocaleDateString('es-AR', {day:'2-digit',month:'long',year:'numeric'});
-  const tally = invoices.filter(i => i.driveUrl || i.invoiceFile || i.submittedAt); // Finance: solo los que enviaron factura
+  // Finance JOIN: Tally submissions get qty/unit from matching Ops entry
+  const opsRecords = invoices.filter(i => !i.fromTally);
+  const tallySubmissions = invoices.filter(i => i.fromTally);
+  // Merge tally submissions with ops data (by email + product)
+  const tallyMerged = tallySubmissions.map(function(sub) {
+    var opsMatch = opsRecords.find(function(ops) {
+      return ops.email.toLowerCase().trim() === sub.email.toLowerCase().trim() &&
+             ops.product === sub.product;
+    });
+    if (opsMatch && (opsMatch.qty || opsMatch.unit)) {
+      return Object.assign({}, sub, { qty: opsMatch.qty || sub.qty, unit: opsMatch.unit || sub.unit });
+    }
+    return sub;
+  });
+  // Ops entries with factura not already covered by a tally submission
+  var tallyEmails = tallySubmissions.map(function(t){ return t.email.toLowerCase().trim() + '|' + t.product; });
+  var opsWithFactura = opsRecords.filter(function(ops) {
+    return (ops.driveUrl || ops.invoiceFile) && !tallyEmails.includes(ops.email.toLowerCase().trim() + '|' + ops.product);
+  });
+  const tally = opsWithFactura.concat(tallyMerged);
   const grandTotal = tally.reduce((s, inv) => s + total(inv), 0);
   document.getElementById('fin-summary').innerHTML = `
     <div class="fin-stat"><div class="lbl">Total a pagar</div><div class="val">${fmt(grandTotal)}</div></div>
