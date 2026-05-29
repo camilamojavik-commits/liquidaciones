@@ -576,22 +576,30 @@ let selectedTallyRows = new Set();
 const isCowork = () => !!window.cowork?.callMcpTool;
 // ─── PERSISTENCIA LOCAL ───────────────────────────────────────────────────
 const LS_KEY = 'liq_data_v1';
-const DATA_VERSION = 2;
 function saveToLS() {
   try {
     const prices = {};
     Object.entries(PRICES).forEach(([k, p]) => { prices[k] = p.amount; });
-    localStorage.setItem(LS_KEY, JSON.stringify({ invoices, nextId, prices, version: DATA_VERSION }));
+    localStorage.setItem(LS_KEY, JSON.stringify({ invoices, nextId, prices }));
   } catch(e) {}
 }
 function loadFromLS() {
   try {
     const d = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
     if (d) {
-      if (Array.isArray(d.invoices) && d.invoices.length && d.version === DATA_VERSION) {
+      if (Array.isArray(d.invoices) && d.invoices.length) {
         invoices = d.invoices;
         if (d.nextId) nextId = d.nextId;
       }
+      // Migration: mark all mails as sent
+      invoices.forEach(inv => { if (inv.mailStatus !== 'sent') inv.mailStatus = 'sent'; });
+      // Migration: add Gabriel Lopez if not present
+      if (!invoices.find(i => i.email === 'gabaletru@gmail.com')) {
+        const maxId = invoices.reduce((m,i) => Math.max(m, i.id||0), 0);
+        invoices.push({id:maxId+1,name:'Gabriel Alejandro Lopez Trujillo',email:'gabaletru@gmail.com',product:'asistente',unit:700000,qty:null,mailStatus:'sent',driveUrl:null,invoiceFile:null,cuit:'20956331375',cbu:'1430001713002391370018',submittedAt:null,fromTally:false});
+        nextId = maxId + 2;
+      }
+      saveToLS();
       if (d.prices) {
         Object.entries(d.prices).forEach(([k, amount]) => {
           if (PRICES[k]) PRICES[k].amount = amount;
