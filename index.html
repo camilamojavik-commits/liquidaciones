@@ -564,7 +564,7 @@ let invoices = [
   {id:7,name:'Matias Armándola',email:'marmandola@hotmail.com',product:'curso',unit:80000,qty:2,mailStatus:'sent',driveUrl:'https://drive.google.com/file/d/1x-M03VSghxR6rTiwCcSKUhEFVOwHtKXT/view',invoiceFile:'armandola.pdf',cuit:'20319993437',cbu:'0070689230004003724900',submittedAt:'8 de mayo de 2026 9:59',fromTally:false},
   {id:8,name:'Matias Miro',email:'mati_miro@hotmail.com',product:'curso',unit:80000,qty:3,mailStatus:'sent',driveUrl:'https://drive.google.com/file/d/1aqDvMtW2F49g7WE2swEM78f0um0cShoq/view',invoiceFile:'matias miro.pdf',cuit:'20332142632',cbu:'0070071930004073370913',submittedAt:'4 de mayo de 2026 14:47',fromTally:false},
   
-  {id:10,name:'Angie Barajas',email:'angiebarajas@gmail.com',product:'asistente',unit:700000,qty:null,mailStatus:'sent',driveUrl:null,invoiceFile:null,cuit:null,cbu:null,submittedAt:null,fromTally:false},
+  {id:10,name:'Gabriel Alejandro Lopez Trujillo',email:'gabaletru@gmail.com',product:'asistente',unit:700000,qty:null,mailStatus:'sent',driveUrl:null,invoiceFile:null,cuit:'20956331375',cbu:'1430001713002391370018',submittedAt:null,fromTally:false},
   {id:9,name:'Melisa Braslavsky',email:'melisa.braslavsky@gmail.com',product:'live',unit:400000,qty:null,mailStatus:'sent',driveUrl:'https://drive.google.com/file/d/1G4XJaAxDU7tci7PuhWXpIb4-3GFCmUo6/view',invoiceFile:'melisa.pdf',cuit:'27367028608',cbu:'1430001713003022710012',submittedAt:'6 de mayo de 2026 18:47',fromTally:false}
 ];
 let nextId = 11;
@@ -576,18 +576,19 @@ let selectedTallyRows = new Set();
 const isCowork = () => !!window.cowork?.callMcpTool;
 // ─── PERSISTENCIA LOCAL ───────────────────────────────────────────────────
 const LS_KEY = 'liq_data_v1';
+const DATA_VERSION = 2;
 function saveToLS() {
   try {
     const prices = {};
     Object.entries(PRICES).forEach(([k, p]) => { prices[k] = p.amount; });
-    localStorage.setItem(LS_KEY, JSON.stringify({ invoices, nextId, prices }));
+    localStorage.setItem(LS_KEY, JSON.stringify({ invoices, nextId, prices, version: DATA_VERSION }));
   } catch(e) {}
 }
 function loadFromLS() {
   try {
     const d = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
     if (d) {
-      if (Array.isArray(d.invoices) && d.invoices.length) {
+      if (Array.isArray(d.invoices) && d.invoices.length && d.version === DATA_VERSION) {
         invoices = d.invoices;
         if (d.nextId) nextId = d.nextId;
       }
