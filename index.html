@@ -1458,6 +1458,7 @@ function showToast(msg, type = 'info') {
 });
 
 // ─── INIT ─────────────────────────────────────────────────────────────────
+loadFromLS(); renderAll(); // render immediately while GAS loads
 (function loadData() {
   var cb = '_liq' + Date.now();
   var s = document.createElement('script');
