@@ -1480,8 +1480,11 @@ loadFromLS(); renderAll(); // render immediately while GAS loads
   window[cb] = function(data) {
     delete window[cb]; if(s.parentNode) s.parentNode.removeChild(s);
     if (data && data.invoices && data.invoices.length) {
+      var _ls=null; try{_ls=JSON.parse(localStorage.getItem(LS_KEY));}catch(e){}
+      if(_ls&&Array.isArray(_ls.invoices)&&_ls.invoices.length>data.invoices.length){renderAll();return;}
+
       invoices = data.invoices.map(function(inv) {
-        return Object.assign({}, inv, { unit: Number(inv.unit)||0, qty: inv.qty !== '' && inv.qty !== null ? Number(inv.qty)||null : null, id: Number(inv.id)||0, fromTally: inv.fromTally === true || String(inv.fromTally).toUpperCase() === 'TRUE' });
+        var existing=invoices.find(function(e){return e.email===inv.email&&e.product===inv.product;});return Object.assign({}, inv, { driveUrl: inv.driveUrl||(existing&&existing.driveUrl)||"", invoiceFile: inv.invoiceFile||(existing&&existing.invoiceFile)||"", unit: Number(inv.unit)||0, qty: inv.qty !== '' && inv.qty !== null ? Number(inv.qty)||null : null, id: Number(inv.id)||0, fromTally: inv.fromTally === true || String(inv.fromTally).toUpperCase() === 'TRUE' });
       });
       nextId = (data.nextId || invoices.length) + 1;
       try { localStorage.setItem(LS_KEY, JSON.stringify({ invoices, nextId })); } catch(e) {}
