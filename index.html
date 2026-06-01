@@ -813,7 +813,8 @@ function renderFinanceView() {
   var opsWithFactura = opsRecords.filter(function(ops) {
     return (ops.driveUrl || ops.invoiceFile) && !tallyEmails.includes(ops.email.toLowerCase().trim() + '|' + ops.product);
   });
-  const tally = opsWithFactura.concat(tallyMerged);
+  // Finance: solo facturas enviadas via Tally (merged con datos ops)
+  const tally = tallyMerged.length > 0 ? tallyMerged : opsWithFactura;
   const grandTotal = tally.reduce((s, inv) => s + total(inv), 0);
   document.getElementById('fin-summary').innerHTML = `
     <div class="fin-stat"><div class="lbl">Total a pagar</div><div class="val">${fmt(grandTotal)}</div></div>
