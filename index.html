@@ -1465,7 +1465,11 @@ loadFromLS(); renderAll(); // render immediately while GAS loads
     } else { loadFromLS(); }
     renderAll();
   };
-  s.onerror = function() { delete window[cb]; if(s.parentNode) s.parentNode.removeChild(s); localStorage.removeItem('liq_data_v1');
+  s.onerror = function() { delete window[cb]; if(s.parentNode) s.parentNode.removeChild(s); if (!localStorage.getItem('liq_junio2026_reset')) {
+    localStorage.removeItem('liq_data_v1');
+    localStorage.removeItem('liq_data_v2');
+    localStorage.setItem('liq_junio2026_reset', '1');
+  }
   loadFromLS(); renderAll(); };
   s.src = GAS_URL + '?callback=' + cb;
   document.head.appendChild(s);
