@@ -554,34 +554,7 @@ const PRICES = {
   asistente:  { label:'Asistente de Contenido',  amount:700000, color:'#BE185D', bg:'#FFECF1' }
 };
 
-let invoices = [
-  {id:1,name:'Lorena Bincaz',email:'loremmabincaz@gmail.com',product:'curso',unit:150000,qty:3,mailStatus:'sent',driveUrl:'https://storage.tally.so/private/27269501400_011_00007_00000076.pdf?id=7jyDZz',invoiceFile:'',cuit:'27269501400',cbu:'3840200500000005295379',submittedAt:'',fromTally:false},
-  {id:2,name:'Alfredo Parente',email:'alfredoparente@gmail.com',product:'curso',unit:150000,qty:1,mailStatus:'sent',driveUrl:'https://storage.tally.so/private/20259481024_011_00001_00000182.pdf?id=xgADlG',invoiceFile:'',cuit:'20259481024',cbu:'0070076430004107924741',submittedAt:'',fromTally:false},
-  {id:3,name:'Jesus Gabriel Jorge',email:'jgjorge96@gmail.com',product:'curso',unit:150000,qty:2,mailStatus:'sent',driveUrl:'https://storage.tally.so/private/20394983005_011_00004_00000200.pdf?id=JGQlNo',invoiceFile:'',cuit:'20394983005',cbu:'1430001713000809060012',submittedAt:'',fromTally:false},
-  {id:4,name:'Federico Gravina',email:'gravinadavilafederico@gmail.com',product:'curso',unit:150000,qty:2,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'20303677667',cbu:'0140017503401752309932',submittedAt:'',fromTally:false},
-  {id:5,name:'Paula Munoz',email:'paula.munoz.ricciardi@gmail.com',product:'curso',unit:150000,qty:2,mailStatus:'sent',driveUrl:'https://storage.tally.so/private/Coderhouse_-Mayo.pdf?id=1OL9gM',invoiceFile:'',cuit:'24405969110',cbu:'2850405040095428013198',submittedAt:'',fromTally:false},
-  {id:6,name:'Sol Di Luciano',email:'diluciano.ms@gmail.com',product:'curso',unit:150000,qty:1,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'',cbu:'',submittedAt:'',fromTally:false},
-  {id:7,name:'Melisa Braslavsky',email:'melisa.braslavsky@gmail.com',product:'curso',unit:150000,qty:5,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'27367028608',cbu:'1430001713003022710012',submittedAt:'',fromTally:false},
-  {id:8,name:'Laura Therisod',email:'lauratherisod@gmail.com',product:'curso',unit:150000,qty:2,mailStatus:'sent',driveUrl:'https://storage.tally.so/private/27333163247_011_00001_00000146.pdf?id=jgjQAa',invoiceFile:'',cuit:'27333163247',cbu:'0170097840000035654728',submittedAt:'',fromTally:false},
-  {id:9,name:'Jorge Miro',email:'miro.jorge1@gmail.com',product:'curso',unit:150000,qty:3,mailStatus:'sent',driveUrl:'https://storage.tally.so/private/20322778288_011_00003_00000074.pdf?id=R2ARxv',invoiceFile:'',cuit:'20322778288',cbu:'0440025740000325190299',submittedAt:'',fromTally:false},
-  {id:10,name:'Matias Miro',email:'mati_miro@hotmail.com',product:'curso',unit:150000,qty:2,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'20332142632',cbu:'0070071930004073370913',submittedAt:'',fromTally:false},
-  {id:11,name:'Juan Carlos Pons',email:'pons933@gmail.com',product:'curso',unit:150000,qty:1,mailStatus:'sent',driveUrl:'https://storage.tally.so/private/20387827081_011_00001_00000200.pdf?id=LVeb1O',invoiceFile:'',cuit:'20387827081',cbu:'0340284108284030152001',submittedAt:'',fromTally:false},
-  {id:12,name:'Gabriel Alejandro Lopez Trujillo',email:'gabaletru@gmail.com',product:'asistente',unit:700000,qty:null,mailStatus:'sent',driveUrl:'https://storage.tally.so/private/20956331375_011_00012_00000149.pdf?id=xgzAJd',invoiceFile:'',cuit:'20956331375',cbu:'1430001713002391370018',submittedAt:'',fromTally:false},
-  {id:13,name:'Daniela Altuna',email:'daniela.altuna@gmail.com',product:'curso',unit:150000,qty:2,mailStatus:'sent',driveUrl:'https://storage.tally.so/private/27324501679_011_00001_00000069.pdf?id=dgO9EA',invoiceFile:'',cuit:'27324501679',cbu:'0110566730056611487133',submittedAt:'',fromTally:false},
-  {id:14,name:'Agustina Rogelja',email:'agustinarogelja@gmail.com',product:'curso',unit:150000,qty:3,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'',cbu:'',submittedAt:'',fromTally:false},
-  {id:15,name:'Sergio Garcia',email:'sergioezequiel.garcia@gmail.com',product:'curso',unit:150000,qty:1,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'',cbu:'',submittedAt:'',fromTally:false},
-  {id:16,name:'Paula Gutierrez',email:'paugutie@hotmail.com',product:'curso',unit:150000,qty:1,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'20377427026',cbu:'0720014488000003040104',submittedAt:'',fromTally:false},
-  {id:17,name:'Jazmin Belga',email:'jazmin.belga70@gmail.com',product:'curso',unit:150000,qty:1,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'',cbu:'',submittedAt:'',fromTally:false},
-  {id:18,name:'Cristina Marconi',email:'krismarconi07@gmail.com',product:'live',unit:400000,qty:1,mailStatus:'sent',driveUrl:'https://storage.tally.so/private/27360909218_011_00002_00000372.pdf?id=EA2Pgo',invoiceFile:'',cuit:'27360909218',cbu:'0140058803500156784120',submittedAt:'29/05/2026 07:27',fromTally:false},
-  {id:19,name:'Erica Destefano',email:'edstfno@gmail.com',product:'live',unit:400000,qty:1,mailStatus:'sent',driveUrl:'https://storage.tally.so/private/27289506042_011_00002_00000226.pdf?id=vglBjD',invoiceFile:'',cuit:'27289506042',cbu:'',submittedAt:'29/05/2026 07:04',fromTally:false},
-  {id:20,name:'Ezequiel Tartaglia',email:'ezequielmtartaglia@gmail.com',product:'live',unit:400000,qty:1,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'',cbu:'',submittedAt:'',fromTally:false},
-  {id:21,name:'Laura Therisod',email:'lauratherisod@gmail.com',product:'live',unit:400000,qty:1,mailStatus:'sent',driveUrl:'https://storage.tally.so/private/27333163247_011_00001_00000145.pdf?id=VqK5vE',invoiceFile:'',cuit:'27333163247',cbu:'0170097840000035654728',submittedAt:'29/05/2026 07:04',fromTally:false},
-  {id:22,name:'Melisa Braslavsky',email:'melisa.braslavsky@gmail.com',product:'live',unit:400000,qty:1,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'27367028608',cbu:'1430001713003022710012',submittedAt:'',fromTally:false},
-  {id:23,name:'Romina Imoberdorf',email:'rominaimoberdorf@gmail.com',product:'live',unit:400000,qty:1,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'',cbu:'',submittedAt:'',fromTally:false},
-  {id:24,name:'Abelina Acosta Felquer',email:'abelina.acosta@coderhouse.com',product:'diplomatura',unit:935000,qty:1,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'',cbu:'',submittedAt:'',fromTally:false},
-  {id:25,name:'Lorena Bincaz',email:'loremmabincaz@gmail.com',product:'diplomatura',unit:1650000,qty:1,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'27269501400',cbu:'3840200500000005295379',submittedAt:'',fromTally:false},
-  {id:26,name:'Melisa Braslavsky',email:'melisa.braslavsky@gmail.com',product:'workshop',unit:50000,qty:1,mailStatus:'sent',driveUrl:'',invoiceFile:'',cuit:'27367028608',cbu:'1430001713003022710012',submittedAt:'',fromTally:false}
-]
+let invoices = []
 let nextId = 27;
 let searchQuery = '', productFilter = '';
 let tallyPendingRows = [];
