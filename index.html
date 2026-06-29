@@ -282,8 +282,8 @@
     <div class="period-pill">
       Período:
       <select id="period-select" onchange="updatePeriod()">
-        <option value="Mayo 2026">Mayo 2026</option>
-        <option value="Junio 2026" selected>Junio 2026</option>
+        <option value="Mayo 2026" selected>Mayo 2026</option>
+        <option value="Junio 2026">Junio 2026</option>
         <option value="Julio 2026">Julio 2026</option>
         <option value="Abril 2026">Abril 2026</option>
         <option value="Marzo 2026">Marzo 2026</option>
@@ -298,6 +298,7 @@
     <button class="btn btn-tally" onclick="openTallySync()" title="Importar nuevas respuestas del formulario Tally">⬆ Sincronizar Tally</button>
     <button class="btn btn-outline" onclick="exportCSV()">⬇ Exportar CSV</button>
     <button class="btn btn-primary" id="btn-nueva" onclick="toggleForm()">+ Nueva factura</button>
+    <button id="btn-deploy" class="btn" onclick="deployToGitHub()" title="Publicar en GitHub Pages" style="display:none;background:#24292f;color:#fff;gap:6px">🚀 GitHub</button>
   </div>
 </div>
 
@@ -539,6 +540,22 @@
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toast-container"></div>
 
+<!-- PAT MODAL -->
+<div class="modal-overlay" id="pat-modal">
+  <div class="modal" style="width:440px">
+    <h3>🔑 GitHub Personal Access Token</h3>
+    <p class="modal-sub">Se guarda solo en este dispositivo (localStorage). Solo se pide una vez.</p>
+    <div class="modal-field">
+      <label>Token (empieza con ghp_…)</label>
+      <input type="password" id="pat-input" placeholder="ghp_xxxxxxxxxxxx" style="font-family:monospace"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('pat-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePATAndDeploy()">Guardar y publicar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 const SHEET_ID = '1gQNCLK0fw8VndKAEvOhCW7w4J-Sou4du6pPfeIchSVc';
@@ -548,76 +565,32 @@ const MONTHS_ES = { 'Enero':1,'Febrero':2,'Marzo':3,'Abril':4,'Mayo':5,'Junio':6
 
 const PRICES = {
   workshop:   { label:'Creación de Workshop',    amount:50000,  color:'#15803D', bg:'#DCFCE7' },
-  curso:      { label:'Creación de Curso',       amount:150000,  color:'#A16207', bg:'#FEF9C3' },
+  curso:      { label:'Creación de Curso',       amount:80000,  color:'#A16207', bg:'#FEF9C3' },
   live:       { label:'Live Sessions',           amount:400000, color:'#7C3AED', bg:'#EDE9FE' },
   diplomatura:{ label:'Diplomatura',             amount:0,      color:'#0369A1', bg:'#E0F2FE' },
   asistente:  { label:'Asistente de Contenido',  amount:700000, color:'#BE185D', bg:'#FFECF1' }
 };
 
-let invoices = []
-let nextId = 27;
+let invoices = [];
+let nextId = 1;
 let searchQuery = '', productFilter = '';
 let tallyPendingRows = [];
 let selectedTallyRows = new Set();
 
 // ─── MCP WRAPPER ──────────────────────────────────────────────────────────
 const isCowork = () => !!window.cowork?.callMcpTool;
+
 // ─── PERSISTENCIA LOCAL ───────────────────────────────────────────────────
 const LS_KEY = 'liq_data_v2';
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzgQQwiXfm2zFu7PXhoUtAWfVt_rCRZiM7IcZMZsKcXQB2Ifr2zVEEt1lbFQWzIL1Mp/exec';
 function saveToLS() {
-  try {
-    const prices = {};
-    Object.entries(PRICES).forEach(([k, p]) => { prices[k] = p.amount; });
-    localStorage.setItem(LS_KEY, JSON.stringify({ invoices, nextId, prices }));
-  } catch(e) {}
-  try { fetch(GAS_URL, { method:'POST', body: JSON.stringify({ invoices, nextId }), headers:{'Content-Type':'application/json'} }).catch(function(){}); } catch(e) {}
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ invoices, nextId })); } catch(e) {}
 }
 function loadFromLS() {
   try {
     const d = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
-    if (d) {
-      if (Array.isArray(d.invoices) && d.invoices.length) {
-        invoices = d.invoices;
-        if (d.nextId) nextId = d.nextId;
-      }
-      // Migration: mark all mails as sent
-      invoices.forEach(inv => { if (inv.mailStatus !== 'sent') inv.mailStatus = 'sent'; });
-      // Migration: add Gabriel Lopez if not present
-      if (!invoices.find(i => i.email === 'gabaletru@gmail.com')) {
-        const maxId = invoices.reduce((m,i) => Math.max(m, i.id||0), 0);
-        invoices.push({id:maxId+1,name:'Gabriel Alejandro Lopez Trujillo',email:'gabaletru@gmail.com',product:'asistente',unit:700000,qty:null,mailStatus:'sent',driveUrl:null,invoiceFile:null,cuit:'20956331375',cbu:'1430001713002391370018',submittedAt:null,fromTally:false});
-        nextId = maxId + 2;
-      }
-      // Migration: fix unit=0 entries using PRICES reference
-      invoices.forEach(function(inv) {
-        if ((!inv.unit || inv.unit === 0) && inv.product && PRICES[inv.product] && PRICES[inv.product].amount > 0) {
-          inv.unit = PRICES[inv.product].amount;
-        }
-      });
-      // Migration: sync driveUrl+submittedAt from Tally submissions to Ops entries
-      (function() {
-        var tallyMap = {};
-        invoices.filter(function(i){ return i.fromTally; }).forEach(function(t) {
-          var k = t.email.toLowerCase().trim() + '|' + t.product;
-          if (!tallyMap[k] || t.submittedAt > (tallyMap[k].submittedAt||'')) tallyMap[k] = t;
-        });
-        invoices.filter(function(i){ return !i.fromTally; }).forEach(function(ops) {
-          var k = ops.email.toLowerCase().trim() + '|' + ops.product;
-          var t = tallyMap[k];
-          if (t) {
-            if (t.driveUrl && !ops.driveUrl) ops.driveUrl = t.driveUrl;
-            if (t.invoiceFile && !ops.invoiceFile) ops.invoiceFile = t.invoiceFile;
-            if (t.submittedAt && !ops.submittedAt) ops.submittedAt = t.submittedAt;
-          }
-        });
-      })();
-      saveToLS();
-      if (d.prices) {
-        Object.entries(d.prices).forEach(([k, amount]) => {
-          if (PRICES[k]) PRICES[k].amount = amount;
-        });
-      }
+    if (d && Array.isArray(d.invoices)) {
+      invoices = d.invoices;
+      if (d.nextId) nextId = d.nextId;
       return true;
     }
   } catch(e) {}
@@ -767,27 +740,7 @@ function renderFinanceView() {
   const period = getPeriodLabel();
   document.getElementById('finance-period').textContent = period;
   document.getElementById('finance-date').textContent = new Date().toLocaleDateString('es-AR', {day:'2-digit',month:'long',year:'numeric'});
-  // Finance JOIN: Tally submissions get qty/unit from matching Ops entry
-  const opsRecords = invoices.filter(i => !i.fromTally);
-  const tallySubmissions = invoices.filter(i => i.fromTally);
-  // Merge tally submissions with ops data (by email + product)
-  const tallyMerged = tallySubmissions.map(function(sub) {
-    var opsMatch = opsRecords.find(function(ops) {
-      return ops.email.toLowerCase().trim() === sub.email.toLowerCase().trim() &&
-             ops.product === sub.product;
-    });
-    if (opsMatch && (opsMatch.qty || opsMatch.unit)) {
-      return Object.assign({}, sub, { qty: opsMatch.qty || sub.qty, unit: opsMatch.unit || sub.unit });
-    }
-    return sub;
-  });
-  // Ops entries with factura not already covered by a tally submission
-  var tallyEmails = tallySubmissions.map(function(t){ return t.email.toLowerCase().trim() + '|' + t.product; });
-  var opsWithFactura = opsRecords.filter(function(ops) {
-    return (ops.driveUrl || ops.invoiceFile) && !tallyEmails.includes(ops.email.toLowerCase().trim() + '|' + ops.product);
-  });
-  // Finance: SOLO Tally submissions - vacio hasta que sincronices
-  const tally = tallyMerged;
+  const tally = opsInvoices();
   const grandTotal = tally.reduce((s, inv) => s + total(inv), 0);
   document.getElementById('fin-summary').innerHTML = `
     <div class="fin-stat"><div class="lbl">Total a pagar</div><div class="val">${fmt(grandTotal)}</div></div>
@@ -969,326 +922,390 @@ function isTallyUrl(str) {
   return str && (str.startsWith('http://') || str.startsWith('https://'));
 }
 
-/**
- * TALLY SYNC PATCH v3 â liquidaciones
- * =====================================
- * Usa fetch() directo al endpoint pÃºblico gviz de Google Sheets.
- * Requiere que el Sheet estÃ© compartido como "cualquiera con el link puede ver".
- *
- * CÃMO INTEGRAR:
- * Copiar TODO este bloque y pegarlo en index.html, justo ANTES del </body>
- * (reemplaza cualquier bloque anterior de openTallySync)
- */
-/**
- * TALLY SYNC PATCH v3 — liquidaciones
- * =====================================
- * Usa fetch() directo al endpoint público gviz de Google Sheets.
- * Requiere que el Sheet esté compartido como "cualquiera con el link puede ver".
- *
- * CÓMO INTEGRAR:
- * Copiar TODO este bloque y pegarlo en index.html, justo ANTES del </body>
- * (reemplaza cualquier bloque anterior de openTallySync)
- */
-/**
- * TALLY SYNC PATCH v3 — liquidaciones
- * =====================================
- * Usa fetch() directo al endpoint público gviz de Google Sheets.
- * Requiere que el Sheet esté compartido como "cualquiera con el link puede ver".
- *
- * CÓMO INTEGRAR:
- * Copiar TODO este bloque y pegarlo en index.html, justo ANTES del </body>
- * (reemplaza cualquier bloque anterior de openTallySync)
- */
-/**
- * TALLY SYNC PATCH v3 — liquidaciones
- * =====================================
- * Usa fetch() directo al endpoint público gviz de Google Sheets.
- * Requiere que el Sheet esté compartido como "cualquiera con el link puede ver".
- *
- * CÓMO INTEGRAR:
- * Copiar TODO este bloque y pegarlo en index.html, justo ANTES del </body>
- * (reemplaza cualquier bloque anterior de openTallySync)
- */
-(function patchTallySync() {
-  const SHEET_ID  = '1gQNCLK0fw8VndKAEvOhCW7w4J-Sou4du6pPfeIchSVc';
-  const SHEET_GID = '347249851';
-  const GVIZ_URL  =
-    'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
-    '/gviz/tq?tqx=out:json&gid=' + SHEET_GID;
-
-  const PRODUCT_KEYWORDS = [
-    { kw: 'live session', val: 'live'        },
-    { kw: 'live',         val: 'live'        },
-    { kw: 'workshop',     val: 'workshop'    },
-    { kw: 'creaci',       val: 'curso'       },
-    { kw: 'curso',        val: 'curso'       },
-    { kw: 'diplomatura',  val: 'diplomatura' },
-    { kw: 'asistente',    val: 'asistente'   }
-  ];
-
-  const PRODUCT_LABELS = {
-    live:        'Live Sessions',
-    workshop:    'Creación de Workshop',
-    curso:       'Creación de Curso',
-    diplomatura: 'Diplomatura',
-    asistente:   'Asistente de Contenido'
-  };
-
-  let _rows = [];
-
-  // ─────────────────────────────────────────────────
-  //  ABRIR MODAL Y CARGAR DATOS
-  // ─────────────────────────────────────────────────
-  window.openTallySync = function () {
-    const modal     = document.getElementById('tally-modal');
-    const container = document.getElementById('tally-rows-container');
-    const emptyEl   = document.getElementById('tally-empty');
-    const importBtn = document.getElementById('import-btn');
-
-    modal.classList.add('open');
-    if (emptyEl)   emptyEl.style.display = 'none';
-    if (importBtn) importBtn.disabled = true;
-    container.innerHTML =
-      '<p style="text-align:center;color:#999;padding:28px 16px">⏳ Cargando desde Google Sheets…</p>';
-
-    fetch(GVIZ_URL)
-      .then(function (r) { return r.text(); })
-      .then(function (t) {
-        // gviz devuelve: /*O_o*/\ngoogle.visualization.Query.setResponse({...});
-        var start = t.indexOf('(') + 1;
-        var end   = t.lastIndexOf(')');
-        var json  = JSON.parse(t.slice(start, end));
-        if (!json || !json.table) throw new Error('Sin tabla');
-        _buildRows(json.table.cols || [], json.table.rows || []);
-      })
-      .catch(function (e) {
-        container.innerHTML =
-          '<p style="text-align:center;color:#e74c3c;padding:20px">' +
-          '❌ No se pudo cargar el Sheet.<br>' +
-          '<small>Verificá que el Sheet esté compartido como público (solo lectura).</small></p>';
-      });
-  };
-
-  // ─────────────────────────────────────────────────
-  //  PARSEAR RESPUESTA GVIZ → _rows
-  // ─────────────────────────────────────────────────
-  function _detectProduct(text) {
-    if (!text) return null;
-    var t = String(text).toLowerCase();
-    for (var i = 0; i < PRODUCT_KEYWORDS.length; i++) {
-      if (t.indexOf(PRODUCT_KEYWORDS[i].kw) !== -1) return PRODUCT_KEYWORDS[i].val;
-    }
-    return null;
+// ─── VIEW INVOICE ─────────────────────────────────────────────────────────
+async function viewInvoice(id) {
+  const inv = invoices.find(i => i.id === id);
+  if (!inv) return;
+  if (inv.driveUrl) { window.open(inv.driveUrl, '_blank'); return; }
+  if (!inv.invoiceFile) { showToast('Sin factura cargada para este contenidista', 'error'); return; }
+  if (isTallyUrl(inv.invoiceFile)) {
+    inv.driveUrl = inv.invoiceFile;
+    renderTable();
+    window.open(inv.invoiceFile, '_blank');
+    showToast(`📄 Abriendo factura de ${inv.name}`, 'success');
+    return;
   }
-
-  function _buildRows(cols, rows) {
-    var idx = { submissionId: 0, nombre: 3, email: 4, cuit: 5, cbu: 6,
-                date: 2, factura: 11, monto: 12, proyecto: -1 };
-    var prodIdx = {};
-
-    cols.forEach(function (col, i) {
-      var lbl = (col.label || '').toLowerCase();
-      if (lbl.includes('submission'))                          idx.submissionId = i;
-      if (lbl.includes('nombre'))                              idx.nombre       = i;
-      if (lbl === 'email' || lbl.includes('correo'))          idx.email        = i;
-      if (lbl.includes('cuit'))                                idx.cuit         = i;
-      if (lbl.includes('cbu') || lbl.includes('alias'))       idx.cbu          = i;
-      if (lbl.includes('submitted') || lbl.includes('fecha')) idx.date         = i;
-      if (lbl === 'factura' || lbl.includes('comprobante'))   idx.factura      = i;
-      if (lbl.includes('monto') || lbl.includes('importe'))   idx.monto        = i;
-      // Columna padre del proyecto (texto libre, sin paréntesis de sub-opción)
-      if (lbl.includes('proyecto') && lbl.indexOf('(') === -1) idx.proyecto    = i;
-      // Sub-columnas checkbox de producto
-      PRODUCT_KEYWORDS.forEach(function (p) {
-        if (lbl.includes(p.kw) && prodIdx[p.val] === undefined) prodIdx[p.val] = i;
-      });
+  if (!isCowork()) { showToast('📁 Archivo: "' + inv.invoiceFile + '" — guardado en Drive. Abrí desde Cowork para verlo.', 'error'); return; }
+  showToast(`🔍 Buscando "${inv.invoiceFile}" en Drive…`, 'info');
+  try {
+    function parseDriveFiles(r) {
+      if (r?.isError) return [];
+      try { return JSON.parse(r?.content?.[0]?.text || '{}')?.files || []; } catch(e2) { return r?.files || []; }
+    }
+    const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__search_files', {
+      query: `title = '${inv.invoiceFile.replace(/'/g, "\\'")}'`, pageSize: 5
     });
-
-    if (!Object.keys(prodIdx).length) {
-      prodIdx.live = 8; prodIdx.workshop = 9; prodIdx.curso = 10;
-    }
-
-    // IDs ya importados (por submission ID o por email|product|monto)
-    var stored = { invoices: [], nextId: 1 };
-    try { stored = JSON.parse(localStorage.getItem('liq_data_v1')) || stored; } catch (e) {}
-    var importedIds = new Set(
-      stored.invoices
-        .filter(function (i) { return i.fromTally && i.submissionId; })
-        .map(function (i) { return i.submissionId; })
-    );
-    var importedKeys = new Set(
-      stored.invoices
-        .filter(function (i) { return i.fromTally; })
-        .map(function (i) { return (i.email + '|' + i.product + '|' + i.unit).toLowerCase(); })
-    );
-
-    function getVal(row, i) {
-      if (i < 0 || i === undefined) return '';
-      var cell = row.c && row.c[i];
-      if (!cell || cell.v == null) return '';
-      if (typeof cell.v === 'boolean') return cell.v;
-      return (cell.f !== undefined && cell.f !== null) ? cell.f : cell.v;
-    }
-
-    _rows = [];
-    rows.forEach(function (row, ri) {
-      var nombre = String(getVal(row, idx.nombre) || '').trim();
-      var email  = String(getVal(row, idx.email)  || '').trim().toLowerCase();
-      if (!nombre || !email) return;
-
-      // Producto: 1) checkboxes, 2) texto del padre, 3) texto en nombre, 4) fallback live
-      var product = null;
-      var pKeys = Object.keys(prodIdx);
-      for (var pi = 0; pi < pKeys.length; pi++) {
-        if (getVal(row, prodIdx[pKeys[pi]])) { product = pKeys[pi]; break; }
+    const files = parseDriveFiles(result);
+    if (files.length > 0) {
+      const f = files[0];
+      inv.driveUrl = f.viewUrl || `https://drive.google.com/file/d/${f.id}/view`;
+      renderTable();
+      window.open(inv.driveUrl, '_blank');
+      showToast(`📄 Factura de ${inv.name} encontrada en Drive`, 'success');
+    } else {
+      const apellido = inv.name.trim().split(' ').pop().toLowerCase();
+      const fb = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__search_files', {
+        query: `title contains '${apellido}' and mimeType = 'application/pdf'`, pageSize: 5
+      });
+      const fbFiles = parseDriveFiles(fb);
+      if (fbFiles.length > 0) {
+        const f = fbFiles[0];
+        inv.driveUrl = f.viewUrl || `https://drive.google.com/file/d/${f.id}/view`;
+        renderTable();
+        window.open(inv.driveUrl, '_blank');
+        showToast(`📄 Factura encontrada (verificar que sea la correcta)`, 'success');
+      } else {
+        showToast(`⚠️ No se encontró "${inv.invoiceFile}" en Drive`, 'error');
       }
-      if (!product) product = _detectProduct(getVal(row, idx.proyecto));
-      if (!product) product = _detectProduct(nombre);
-      if (!product) product = 'live';  // fallback
-
-      var montoRaw = getVal(row, idx.monto);
-      var monto    = typeof montoRaw === 'number'
-        ? montoRaw
-        : (parseFloat(String(montoRaw).replace(/\./g, '').replace(',', '.')) || 0);
-
-      var submissionId = String(getVal(row, idx.submissionId) || '').trim();
-      var dedupKey     = (email + '|' + product + '|' + monto).toLowerCase();
-      var done = (submissionId && importedIds.has(submissionId)) || importedKeys.has(dedupKey);
-
-      _rows.push({
-        _ri:          ri,
-        submissionId: submissionId,
-        nombre:       nombre,
-        email:        email,
-        cuit:         String(getVal(row, idx.cuit)    || '').trim(),
-        cbu:          String(getVal(row, idx.cbu)     || '').trim(),
-        date:         String(getVal(row, idx.date)    || '').trim(),
-        facturaUrl:   String(getVal(row, idx.factura) || '').trim(),
-        monto:        monto,
-        product:      product,
-        done:         done
-      });
-    });
-
-    _renderRows();
+    }
+  } catch(e) {
+    showToast(`❌ Error buscando en Drive: ${e.message || e}`, 'error');
   }
+}
 
-  // ─────────────────────────────────────────────────
-  //  RENDERIZAR FILAS EN EL MODAL
-  // ─────────────────────────────────────────────────
-  function _renderRows() {
-    var container = document.getElementById('tally-rows-container');
-    var emptyEl   = document.getElementById('tally-empty');
-    var importBtn = document.getElementById('import-btn');
+// ─── PDF GENERATOR ────────────────────────────────────────────────────────
+function buildInvoicePDF(inv) {
+  const period = getPeriodLabel();
+  const payDate = getPaymentDate();
+  const t = total(inv);
+  const today = new Date().toLocaleDateString('es-AR');
+  const san = s => (s||'')
+    .replace(/[áàâä]/gi, c => c===c.toUpperCase()?'A':'a')
+    .replace(/[éèêë]/gi, c => c===c.toUpperCase()?'E':'e')
+    .replace(/[íìîï]/gi, c => c===c.toUpperCase()?'I':'i')
+    .replace(/[óòôö]/gi, c => c===c.toUpperCase()?'O':'o')
+    .replace(/[úùûü]/gi, c => c===c.toUpperCase()?'U':'u')
+    .replace(/[ñ]/g,'n').replace(/[Ñ]/g,'N')
+    .replace(/[()\\]/g, c => '\\' + c)
+    .replace(/[^\x20-\x7E]/g, '?');
+  const fmtP = n => n != null ? '$' + Number(n).toLocaleString('es-AR',{minimumFractionDigits:0}) : '';
+  const txt = (x, y, font, size, str) => `BT /F${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${san(str)}) Tj ET`;
+  const cs = [
+    '0 0 0 rg', '0 700 612 92 re f',
+    '1 1 1 rg',
+    txt(40, 752, 2, 22, 'CODERHOUSE'),
+    txt(40, 728, 1, 10, 'Comprobante de Liquidacion'),
+    txt(300, 728, 1, 10, period),
+    '0 0 0 rg',
+    txt(40, 668, 2, 12, 'Detalle de pago'),
+    '0.80 0.80 0.80 RG 0.5 w 40 658 m 572 658 l S',
+    '0.50 0.50 0.50 rg',
+    txt(40,  641, 1, 7.5, 'NOMBRE Y APELLIDO'),
+    txt(310, 641, 1, 7.5, 'PRODUCTO'),
+    '0 0 0 rg',
+    txt(40,  624, 2, 11, inv.name),
+    txt(310, 624, 1, 11, PRICES[inv.product].label),
+    '0.93 0.93 0.93 RG 0.4 w 40 613 m 572 613 l S',
+    '0.50 0.50 0.50 rg',
+    txt(40,  600, 1, 7.5, 'EMAIL'),
+    txt(310, 600, 1, 7.5, 'FECHA DE PAGO'),
+    '0 0 0 rg',
+    txt(40,  584, 1, 10, inv.email),
+    txt(310, 584, 2, 11, payDate),
+    '0.93 0.93 0.93 RG 0.4 w 40 573 m 572 573 l S',
+    '0.50 0.50 0.50 rg',
+    txt(40,  560, 1, 7.5, 'MONTO POR UNIDAD'),
+    inv.qty != null ? txt(310, 560, 1, 7.5, 'CANTIDAD') : '',
+    '0 0 0 rg',
+    txt(40,  544, 1, 11, fmtP(inv.unit)),
+    inv.qty != null ? txt(310, 544, 2, 11, String(inv.qty)) : '',
+    '0.05 0.05 0.05 rg', '40 450 532 72 re f',
+    '1 1 1 rg',
+    txt(55, 510, 1, 8,  'TOTAL A COBRAR'),
+    txt(55, 466, 2, 28, fmtP(t)),
+    '0.80 0.80 0.80 RG 0.4 w 40 52 m 572 52 l S',
+    '0.60 0.60 0.60 rg',
+    txt(40,  38, 1, 8, 'Emitido por Coderhouse Ops - ' + today),
+    txt(410, 38, 1, 8, 'Pago acreditado: ' + payDate),
+  ].filter(Boolean).join('\n');
+  const o1 = '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n';
+  const o2 = '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n';
+  const o3 = '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>\nendobj\n';
+  const o4 = `4 0 obj\n<< /Length ${cs.length} >>\nstream\n${cs}\nendstream\nendobj\n`;
+  const o5 = '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n';
+  const o6 = '6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n';
+  const allObjs = [o1, o2, o3, o4, o5, o6];
+  let hdr = '%PDF-1.4\n', pos = hdr.length;
+  const xPos = [];
+  allObjs.forEach(o => { xPos.push(pos); pos += o.length; });
+  const xrefStart = pos;
+  const xref = `xref\n0 7\n0000000000 65535 f \n${xPos.map(p => String(p).padStart(10,'0') + ' 00000 n ').join('\n')}\n`;
+  const trailer = `trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  return hdr + allObjs.join('') + xref + trailer;
+}
 
-    var newRows  = _rows.filter(function (r) { return !r.done; });
-    var doneRows = _rows.filter(function (r) { return r.done; });
+// ─── DRIVE ────────────────────────────────────────────────────────────────
+async function saveToDrive(id) {
+  const inv = invoices.find(i => i.id === id);
+  if (!inv) return;
+  const period = getPeriodLabel();
+  showToast('💾 Generando PDF y subiendo a Drive…', 'info');
+  try {
+    const pdfStr = buildInvoicePDF(inv);
+    const b64 = btoa(pdfStr);
+    const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__create_file', {
+      title: `Factura_${inv.name.replace(/\s+/g,'_')}_${period.replace(' ','_')}.pdf`,
+      base64Content: b64,
+      contentMimeType: 'application/pdf',
+      disableConversionToGoogleType: true
+    });
+    if (result?.isError) throw new Error(result.content?.[0]?.text || 'Error al subir a Drive');
+    let url = null;
+    try {
+      const parsed = JSON.parse(result?.content?.[0]?.text || '{}');
+      url = parsed.alternateLink || parsed.webViewLink || (parsed.id ? `https://drive.google.com/file/d/${parsed.id}/view` : null);
+    } catch(e2) {}
+    inv.driveUrl = url || 'https://drive.google.com';
+    renderTable();
+    showToast(`📄 PDF guardado en Drive: ${inv.name}`, 'success');
+  } catch (e) {
+    showToast(`❌ Error al guardar PDF en Drive: ${e.message || e}`, 'error');
+  }
+}
 
-    if (!newRows.length && !doneRows.length) {
-      container.innerHTML = '';
-      if (emptyEl)   emptyEl.style.display = '';
-      if (importBtn) importBtn.disabled = true;
+// ─── TALLY SYNC ───────────────────────────────────────────────────────────
+const PASTE_UI = `<div style="padding:16px">
+  <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:var(--gray-700)">📋 Pegá el CSV de "recepción de facturas"</p>
+  <p style="margin:0 0 10px;font-size:12px;color:var(--gray-500)">
+    En el Sheet → <strong>Archivo → Descargar → Valores separados por comas (.csv)</strong><br>
+    Asegurate de estar en la hoja <em>recepción de facturas</em> antes de descargar.
+  </p>
+  <textarea id="tally-csv-paste" placeholder="Pegá el contenido CSV acá…"
+    style="width:100%;box-sizing:border-box;height:140px;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:11px;font-family:monospace;resize:vertical;outline:none"></textarea>
+  <button onclick="processPastedCSV()"
+    style="margin-top:8px;padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">
+    ▶ Procesar CSV
+  </button>
+</div>`;
+
+async function openTallySync() {
+  document.getElementById('tally-modal').classList.add('open');
+  selectedTallyRows.clear();
+  showToast('🔄 Leyendo respuestas del formulario…', 'info');
+  document.getElementById('tally-rows-container').innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400)">⏳ Cargando datos…</div>';
+
+  // 1️⃣ Intentar con la URL pública del Sheet (funciona si el sheet está compartido)
+  try {
+    const resp = await fetch(SHEET_PUBLIC_CSV);
+    if (resp.ok) {
+      const csvText = await resp.text();
+      parseTallyContent(csvText);
       return;
     }
+  } catch(e) { /* no public access, seguir */ }
 
-    var html = '<div style="font-size:12px;color:#888;margin-bottom:10px">' +
-      newRows.length  + ' nueva' + (newRows.length  !== 1 ? 's' : '') + ' \u00B7 ' +
-      doneRows.length + ' ya importada' + (doneRows.length !== 1 ? 's' : '') +
-    '</div>';
-
-    newRows.forEach(function (r) {
-      html +=
-        '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;' +
-               'border:1px solid #e0e0e0;border-radius:8px;margin-bottom:8px;cursor:pointer;background:#fff;">' +
-          '<input type="checkbox" checked data-ri="' + r._ri + '" style="margin-top:4px;flex-shrink:0;">' +
-          '<div style="flex:1;min-width:0">' +
-            '<div style="font-weight:600;font-size:14px">' + r.nombre + '</div>' +
-            '<div style="font-size:12px;color:#666;margin-top:2px">' +
-              r.email + ' \u00B7 ' + (PRODUCT_LABELS[r.product] || r.product) +
-              ' \u00B7 $' + r.monto.toLocaleString('es-AR') +
-            '</div>' +
-            (r.cuit
-              ? '<div style="font-size:11px;color:#aaa;margin-top:2px">CUIT: ' + r.cuit +
-                (r.cbu ? ' \u00B7 CBU: ' + r.cbu : '') + '</div>'
-              : '') +
-          '</div>' +
-          '<div style="font-size:11px;color:#ccc;flex-shrink:0;padding-top:2px">' + (r.date || '') + '</div>' +
-        '</label>';
-    });
-
-    if (doneRows.length) {
-      html +=
-        '<details style="margin-top:6px">' +
-          '<summary style="font-size:12px;color:#aaa;cursor:pointer">' +
-            doneRows.length + ' ya importada(s) — expandir' +
-          '</summary>';
-      doneRows.forEach(function (r) {
-        html +=
-          '<div style="padding:8px 14px;border:1px solid #eee;border-radius:8px;margin-top:4px;opacity:.55">' +
-            '<span style="font-size:13px;font-weight:600">' + r.nombre + '</span>' +
-            '<span style="font-size:12px;color:#aaa;margin-left:8px">' +
-              (PRODUCT_LABELS[r.product] || r.product) + ' \u00B7 $' + r.monto.toLocaleString('es-AR') +
-            '</span>' +
-          '</div>';
+  // 2️⃣ Fallback Cowork: leer via MCP (autenticado)
+  if (isCowork()) {
+    try {
+      const result = await callMcp('mcp__d2ade0cc-d30c-422e-90e1-c96ec8e842c2__download_file_content', {
+        fileId: SHEET_ID, exportMimeType: 'text/csv'
       });
-      html += '</details>';
-    }
-
-    container.innerHTML = html;
-    if (emptyEl)   emptyEl.style.display = 'none';
-    if (importBtn) importBtn.disabled = newRows.length === 0;
+      if (result?.isError) throw new Error(result.content?.[0]?.text || 'MCP error');
+      const toolText = (result?.content?.[0]?.text) || (typeof result === 'string' ? result : JSON.stringify(result));
+      let b64 = null;
+      try { const parsed = JSON.parse(toolText); b64 = parsed?.content || parsed?.fileContent || null; }
+      catch(e2) { b64 = toolText; }
+      if (!b64) throw new Error('No se pudo extraer contenido del Sheet');
+      const csvText = decodeBase64UTF8(b64.replace(/\s/g,''));
+      parseTallyContent(csvText);
+      return;
+    } catch(e) { /* caer al paste manual */ }
   }
 
-  // ─────────────────────────────────────────────────
-  //  IMPORTAR SELECCIONADAS
-  // ─────────────────────────────────────────────────
-  window.importSelected = function () {
-    var checked = document.querySelectorAll('#tally-rows-container input[type="checkbox"]:checked');
-    var selectedRis = new Set(
-      Array.from(checked).map(function (cb) { return parseInt(cb.dataset.ri, 10); })
-    );
+  // 3️⃣ Fallback final: pegado manual
+  document.getElementById('tally-rows-container').innerHTML = PASTE_UI;
+}
 
-    var toImport = _rows.filter(function (r) {
-      return selectedRis.has(r._ri) && !r.done;
-    });
-    if (!toImport.length) return;
+function processPastedCSV() {
+  const csv = document.getElementById('tally-csv-paste')?.value?.trim();
+  if (!csv) { showToast('Pegá el CSV primero', 'error'); return; }
+  document.getElementById('tally-rows-container').innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400)">⏳ Procesando…</div>';
+  parseTallyContent(csv);
+}
 
-    var data = { invoices: [], nextId: 1 };
-    try { data = JSON.parse(localStorage.getItem('liq_data_v1')) || data; } catch (e) {}
+// Custom base64 decoder — avoids atob() DOMException issues
+function decodeBase64UTF8(b64) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const clean = b64.replace(/[^A-Za-z0-9+/=]/g, '');
+  const bytes = [];
+  for (let i = 0; i < clean.length; i += 4) {
+    const a = chars.indexOf(clean[i]);
+    const b = chars.indexOf(clean[i+1]);
+    const c = clean[i+2] === '=' ? 0 : chars.indexOf(clean[i+2]);
+    const d = clean[i+3] === '=' ? 0 : chars.indexOf(clean[i+3]);
+    bytes.push((a << 2) | (b >> 4));
+    if (clean[i+2] !== '=') bytes.push(((b & 0xF) << 4) | (c >> 2));
+    if (clean[i+3] !== '=') bytes.push(((c & 0x3) << 6) | d);
+  }
+  return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+}
 
-    var period = (document.getElementById('period-select') || {}).value || '';
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuote && line[i+1] === '"') { cur += '"'; i++; }
+      else inQuote = !inQuote;
+    } else if (ch === ',' && !inQuote) {
+      result.push(cur.trim()); cur = '';
+    } else { cur += ch; }
+  }
+  result.push(cur.trim());
+  return result;
+}
 
-    toImport.forEach(function (r) {
-      data.invoices.push({
-        id:           data.nextId++,
-        submissionId: r.submissionId || '',
-        name:         r.nombre,
-        email:        r.email,
-        product:      r.product,
-        unit:         r.monto || (PRICES[r.product] ? PRICES[r.product].amount : 0),
-        qty:          1,
-        mailStatus:   'no',
-        driveUrl:     r.facturaUrl || '',
-        invoiceFile:  r.facturaUrl ? (r.facturaUrl.split('/').pop() || 'factura.pdf') : '',
-        cuit:         r.cuit        || '',
-        cbu:          r.cbu         || '',
-        submittedAt:  r.date        || '',
-        fromTally:    true,
-        period:       period
-      });
-    });
+function parseTallyContent(rawText) {
+  const lines = rawText.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l => l.trim().length > 0);
+  if (lines.length < 2) {
+    document.getElementById('tally-rows-container').innerHTML =
+      '<div style="padding:12px"><div style="color:var(--gray-400)">No hay respuestas en el formulario aún.</div>' +
+      '<details style="margin-top:8px;font-size:11px"><summary>🔍 Debug (primeros 500 chars)</summary>' +
+      '<pre style="background:#f5f5f5;padding:8px;font-size:10px;white-space:pre-wrap;overflow:auto;max-height:200px">' +
+      rawText.substring(0,500).replace(/</g,'&lt;') + '</pre></details></div>';
+    return;
+  }
+  const firstLine = lines[0];
+  const sep = firstLine.includes('\t') ? '\t' : (firstLine.split(',').length > firstLine.split('|').length ? ',' : '|');
+  const headers = (sep === ',' ? parseCSVLine(firstLine) : firstLine.split(sep)).map(h => h.trim().toLowerCase());
+  function findLastIdx(kws) {
+    for (const kw of kws) {
+      const exact = headers.lastIndexOf(kw);
+      if (exact >= 0) return exact;
+      for (let i = headers.length - 1; i >= 0; i--) {
+        if (headers[i].includes(kw)) return i;
+      }
+    }
+    return -1;
+  }
+  function findFirstIdx(kws) {
+    for (const kw of kws) {
+      const i = headers.findIndex(h => h === kw || h.includes(kw));
+      if (i >= 0) return i;
+    }
+    return -1;
+  }
+  const nameIdx    = findFirstIdx(['nombre y apellido','contenidista','nombre','name','apellido','full name']);
+  const emailIdx   = findFirstIdx(['email','mail','correo']);
+  const productIdx = findFirstIdx(['proyecto','producto','product','tipo de','servicio','qué creaste','que creaste']);
+  const dateIdx    = findFirstIdx(['submitted at','submitted_at','created at','timestamp','fecha']);
+  const cuitIdx    = findFirstIdx(['cuit']);
+  const cbuIdx     = findFirstIdx(['cbu','alias']);
+  const invoiceIdx = findLastIdx(['link factura','adjunto','comprobante','archivo','file upload','upload','pdf','factura']);
+  const existing = new Set(invoices.map(i => i.email.toLowerCase() + '_' + i.product));
+  tallyPendingRows = [];
+  lines.slice(1).forEach((line, idx) => {
+    const cols = sep === ',' ? parseCSVLine(line) : line.split(sep).map(c => c.trim());
+    if (cols.length < 2) return;
+    const name  = nameIdx >= 0  ? cols[nameIdx]  : '';
+    const email = emailIdx >= 0 ? (cols[emailIdx] || '').replace(/\s/g,'') : '';
+    if (!name && !email) return;
+    const rawProduct = productIdx >= 0 ? cols[productIdx].toLowerCase() : '';
+    let product;
+    if (rawProduct === 'true' || rawProduct === 'false' || rawProduct === '') {
+      const productText = cols.slice(7, 11).find(c => c && c.toUpperCase() !== 'TRUE' && c.toUpperCase() !== 'FALSE' && c.trim() !== '') || '';
+      product = detectProduct(productText.toLowerCase());
+    } else {
+      product = detectProduct(rawProduct);
+    }
+    const amount = product ? PRICES[product].amount : 0;
+    const cuit = cuitIdx >= 0 ? cols[cuitIdx] || null : null;
+    const cbu  = cbuIdx >= 0  ? cols[cbuIdx]  || null : null;
+    const invoiceFile = invoiceIdx >= 0 ? cols[invoiceIdx] || null : null;
+    const submittedAt = dateIdx >= 0 ? cols[dateIdx] || null : null;
+    const key = email.toLowerCase() + '_' + product;
+    tallyPendingRows.push({ idx, name, email, product, qty: null, unit: amount, cuit, cbu, invoiceFile, submittedAt, alreadyImported: existing.has(key) });
+  });
+  // ── Filtrar por período seleccionado ──
+  const period = getPeriodLabel();
+  const pParts = period.split(' ');
+  const pMonth = MONTHS_ES[pParts[0]];
+  const pYear  = parseInt(pParts[1]);
+  tallyPendingRows = tallyPendingRows.filter(r => {
+    if (!r.submittedAt) return true; // sin fecha: incluir siempre
+    const d = new Date(r.submittedAt);
+    return (d.getMonth() + 1) === pMonth && d.getFullYear() === pYear;
+  });
 
-    localStorage.setItem('liq_data_v1', JSON.stringify(data));
+  const newRows = tallyPendingRows.filter(r => !r.alreadyImported);
+  if (!newRows.length) {
+    document.getElementById('tally-rows-container').innerHTML =
+      '<div style="padding:12px"><div class="no-errors">✅ No hay respuestas nuevas — todo ya fue importado.</div>' +
+      '<details style="margin-top:8px;font-size:11px;color:var(--gray-400)"><summary>🔍 Debug</summary>' +
+      '<pre style="background:#f5f5f5;padding:8px;font-size:10px;white-space:pre-wrap;overflow:auto;max-height:200px">' +
+      'sep="' + sep + '" | headers (' + headers.length + '):\n' + headers.map((h,i)=>i+':"'+h+'"').join(' | ') +
+      '\nnombre=col'+nameIdx+' email=col'+emailIdx+' producto=col'+productIdx+' cuit=col'+cuitIdx+' cbu=col'+cbuIdx+' factura=col'+invoiceIdx+' fecha=col'+dateIdx+
+      '\nTotal filas: ' + tallyPendingRows.length +
+      (tallyPendingRows[0] ? '\nFila 0: '+JSON.stringify(tallyPendingRows[0]) : '') +
+      '\n\nPrimeros 300 chars del raw:\n' + rawText.substring(0,300).replace(/</g,'&lt;') +
+      '</pre></details></div>';
+    return;
+  }
+  tallyPendingRows = newRows;
+  renderTallyRows();
+}
 
-    if (typeof closeTallyModal === 'function') closeTallyModal();
+function detectProduct(str) {
+  if (!str) return 'workshop';
+  if (str.includes('live') || str.includes('sesi')) return 'live';
+  if (str.includes('diplom')) return 'diplomatura';
+  if (str.includes('asistente') || str.includes('contenido') || str.includes('assistant')) return 'asistente';
+  if (str.includes('curs') || str.includes('course')) return 'curso';
+  return 'workshop';
+}
 
-    if (typeof loadFromLS === 'function') loadFromLS();
-    if (typeof renderAll  === 'function') renderAll();
-    else location.reload();
-  };
+function parseAmount(str) {
+  if (!str) return null;
+  const n = parseFloat(str.replace(/[^0-9.,]/g,'').replace(',','.'));
+  return isNaN(n) ? null : n;
+}
 
-  console.log('[liquidaciones] Tally sync patch v3 cargado ✓');
-})();
+function renderTallyRows() {
+  document.getElementById('tally-rows-container').innerHTML = tallyPendingRows.map((r, i) => `
+    <div class="tally-row" id="trow-${i}" onclick="toggleTallyRow(${i})">
+      <div class="tally-check" id="tcheck-${i}"></div>
+      <div class="tally-info">
+        <div class="tally-name">${r.name || '(sin nombre)'}</div>
+        <div class="tally-detail">${r.email || '(sin email)'} · ${PRICES[r.product]?.label || r.product} · Cant: ${r.qty ?? '–'}${r.cuit ? ' · CUIT: '+r.cuit : ''}${r.submittedAt ? ' · 📅 '+formatSubmittedAt(r.submittedAt) : ''}${r.invoiceFile ? ' · 📄 '+(isTallyUrl(r.invoiceFile) ? 'Factura Tally ✓' : r.invoiceFile) : ' · ⚠️ sin factura'}</div>
+      </div>
+      <div class="tally-amount">${fmt(r.unit && r.qty ? r.unit * r.qty : r.unit)}</div>
+    </div>`).join('');
+}
+
+function toggleTallyRow(i) {
+  if (selectedTallyRows.has(i)) selectedTallyRows.delete(i);
+  else selectedTallyRows.add(i);
+  document.getElementById(`trow-${i}`).classList.toggle('selected', selectedTallyRows.has(i));
+  document.getElementById(`tcheck-${i}`).textContent = selectedTallyRows.has(i) ? '✓' : ' ';
+}
+
+function importSelected() {
+  if (!selectedTallyRows.size) { showToast('Seleccioná al menos una fila', 'error'); return; }
+  selectedTallyRows.forEach(i => {
+    const r = tallyPendingRows[i];
+    if (!r) return;
+    const isUrl = isTallyUrl(r.invoiceFile);
+    invoices.push({ id: nextId++, name: r.name, email: r.email, product: r.product, unit: r.unit, qty: r.qty, mailStatus: 'pending', driveUrl: isUrl ? r.invoiceFile : null, invoiceFile: isUrl ? null : (r.invoiceFile || null), cuit: r.cuit || null, cbu: r.cbu || null, submittedAt: r.submittedAt || null, fromTally: true });
+  });
+  saveToLS();
+  const count = selectedTallyRows.size;
+  closeTallyModal();
+  renderAll();
+  if (document.getElementById('finance-view').style.display !== 'none') renderFinanceView();
+  showToast(`✅ ${count} factura${count > 1 ? 's' : ''} importada${count > 1 ? 's' : ''} desde Tally`, 'success');
+}
+
 function closeTallyModal() {
   document.getElementById('tally-modal').classList.remove('open');
   selectedTallyRows.clear();
@@ -1331,7 +1348,6 @@ function editPrice(k) {
   const n = parseFloat(v.replace(/[^0-9.,]/g,'').replace(',','.'));
   if (isNaN(n) || n <= 0) { alert('Ingresá un monto válido.'); return; }
   PRICES[k].amount = n;
-  saveToLS();
   renderAll();
 }
 
@@ -1421,9 +1437,92 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('open');
 }
 
+// ─── DEPLOY TO GITHUB ─────────────────────────────────────────────────────
+const GH_REPO  = 'camilamojavik-commits/liquidaciones';
+const GH_FILE  = 'index.html';
+const GH_API   = `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`;
+
+function htmlToBase64Utf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin);
+}
+
+async function getGHSha(pat) {
+  const r = await fetch(GH_API, { headers: { Authorization: 'token ' + pat } });
+  if (!r.ok) throw new Error('No se pudo obtener el SHA: ' + r.status);
+  return (await r.json()).sha;
+}
+
+async function deployToGitHub() {
+  const pat = localStorage.getItem('gh_pat');
+  if (!pat) {
+    // Show PAT modal, deployment will continue in savePATAndDeploy()
+    document.getElementById('pat-modal').classList.add('open');
+    setTimeout(() => document.getElementById('pat-input').focus(), 100);
+    return;
+  }
+  await _doDeploy(pat);
+}
+
+async function savePATAndDeploy() {
+  const input = document.getElementById('pat-input').value.trim();
+  if (!input || !input.startsWith('ghp_')) {
+    showToast('Token inválido — debe empezar con ghp_', 'error');
+    return;
+  }
+  localStorage.setItem('gh_pat', input);
+  closeModal('pat-modal');
+  document.getElementById('pat-input').value = '';
+  await _doDeploy(input);
+}
+
+async function _doDeploy(pat) {
+  const btn = document.getElementById('btn-deploy');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '⏳ Publicando…';
+  btn.disabled = true;
+  try {
+    showToast('Obteniendo versión actual…', 'info');
+    const sha = await getGHSha(pat);
+
+    // Build static HTML: remove cowork meta tag so GitHub version is clean
+    let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    html = html.replace(/<script type="application\/json" id="cowork-artifact-meta">[\s\S]*?<\/script>\n?/, '');
+
+    const content = htmlToBase64Utf8(html);
+    const today = new Date().toISOString().slice(0,10);
+
+    showToast('Pusheando a GitHub…', 'info');
+    const resp = await fetch(GH_API, {
+      method: 'PUT',
+      headers: { Authorization: 'token ' + pat, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: `Update liquidaciones ${today}`, content, sha })
+    });
+
+    if (resp.ok) {
+      showToast('✅ ¡Publicado en GitHub Pages!', 'success');
+    } else {
+      const err = await resp.json();
+      if (err.message && err.message.includes('Bad credentials')) {
+        localStorage.removeItem('gh_pat');
+        showToast('Token inválido — se eliminó. Reintentá.', 'error');
+      } else {
+        throw new Error(err.message);
+      }
+    }
+  } catch(e) {
+    showToast('Error al publicar: ' + e.message, 'error');
+  } finally {
+    btn.innerHTML = orig;
+    btn.disabled = false;
+  }
+}
+
 function exportCSV() {
-  const rows = [['Nombre','Email','Producto','Monto unit.','Cantidad','Total','Mail','Drive','CUIT','CBU']];
-  opsInvoices().forEach(inv => rows.push([inv.name, inv.email, PRICES[inv.product].label, inv.unit, inv.qty ?? '', total(inv), inv.mailStatus, inv.driveUrl || '', inv.cuit || '', inv.cbu || '']));
+  const rows = [['Nombre','Email','Producto','Monto unit.','Cantidad','Total','Mail','Drive']];
+  invoices.forEach(inv => rows.push([inv.name, inv.email, PRICES[inv.product].label, inv.unit, inv.qty ?? '', total(inv), inv.mailStatus, inv.driveUrl || '']));
   const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
   const a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
@@ -1442,38 +1541,15 @@ function showToast(msg, type = 'info') {
 }
 
 // Close modals on overlay click
-['tally-modal','edit-modal','mail-modal'].forEach(id => {
+['tally-modal','edit-modal','mail-modal','pat-modal'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(id); });
 });
 
 // ─── INIT ─────────────────────────────────────────────────────────────────
-loadFromLS(); renderAll(); // render immediately while GAS loads
-(function loadData() {
-  var cb = '_liq' + Date.now();
-  var s = document.createElement('script');
-  window[cb] = function(data) {
-    delete window[cb]; if(s.parentNode) s.parentNode.removeChild(s);
-    if (data && data.invoices && data.invoices.length) {
-      var _ls=null; try{_ls=JSON.parse(localStorage.getItem(LS_KEY));}catch(e){}
-      if(_ls&&Array.isArray(_ls.invoices)&&_ls.invoices.length>data.invoices.length){renderAll();return;}
-
-      invoices = data.invoices.map(function(inv) {
-        var existing=invoices.find(function(e){return e.email===inv.email&&e.product===inv.product;});return Object.assign({}, inv, { driveUrl: inv.driveUrl||(existing&&existing.driveUrl)||"", invoiceFile: inv.invoiceFile||(existing&&existing.invoiceFile)||"", unit: Number(inv.unit)||0, qty: inv.qty !== '' && inv.qty !== null ? Number(inv.qty)||null : null, id: Number(inv.id)||0, fromTally: inv.fromTally === true || String(inv.fromTally).toUpperCase() === 'TRUE' });
-      });
-      nextId = (data.nextId || invoices.length) + 1;
-      try { localStorage.setItem(LS_KEY, JSON.stringify({ invoices, nextId })); } catch(e) {}
-    } else { loadFromLS(); }
-    renderAll();
-  };
-  s.onerror = function() { delete window[cb]; if(s.parentNode) s.parentNode.removeChild(s); if (!localStorage.getItem('liq_junio2026_reset')) {
-    localStorage.removeItem('liq_data_v1');
-    localStorage.removeItem('liq_data_v2');
-    localStorage.setItem('liq_junio2026_reset', '1');
-  }
-  loadFromLS(); renderAll(); };
-  s.src = GAS_URL + '?callback=' + cb;
-  document.head.appendChild(s);
-})();
+loadFromLS(); // restaurar datos guardados localmente si los hay
+renderAll();
+// Show Deploy button only in Cowork
+if (isCowork()) document.getElementById('btn-deploy').style.display = 'flex';
 </script>
 </div><!-- /app -->
 </body>
